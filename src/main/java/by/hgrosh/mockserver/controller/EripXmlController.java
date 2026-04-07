@@ -26,32 +26,27 @@ public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
 
-    @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"},
+    @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"}, 
             consumes = {"application/x-www-form-urlencoded", "multipart/form-data", "*/*"})
-    public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) {
         String xmlIn = request.getParameter("XML");
-
+        System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
+        
         if (xmlIn == null || xmlIn.isEmpty()) {
-            log.warn("ERIP: Incoming request has empty XML parameter");
-            response.sendError(400, "Missing XML parameter");
+            System.out.println("!!! WARNING: Incoming XML is empty");
             return;
         }
-
-        log.info("ERIP XML received:\n{}", xmlIn);
 
         Map<String, String> data = parseEripXml(xmlIn);
         String type = data.getOrDefault("RequestType", "ServiceInfo");
         String requestId = data.getOrDefault("RequestId", "0");
-        String account = data.getOrDefault("PersonalAccount", "unknown");
+        String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
-
-        log.info("ERIP: type={}, account={}, requestId={}, serviceNo={}", type, account, requestId, serviceNo);
 
         String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         String outXml;
         
         if ("TransactionStart".equals(type)) {
-            // Numeric TrxId (N12)
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
@@ -60,7 +55,7 @@ public class EripXmlController {
                     "<Status>0</Status>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                    "<Info><InfoLine>Оплата инициирована. Номер: " + myTrxId + "</InfoLine></Info>" +
+                    "<Info><InfoLine>TX: " + myTrxId + "</InfoLine></Info>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
@@ -72,7 +67,6 @@ public class EripXmlController {
                     "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Total Hybrid (Session Meta + Root Fields + Nested Structure)
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
@@ -83,50 +77,42 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<Amount>40,00</Amount>" +
+                    "<Amount>40.00</Amount>" +
                     "<CanEditAmount>1</CanEditAmount>" +
                     "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
-                    "<Patronymic></Patronymic>" +
                     "<CanEditName>0</CanEditName>" +
                     "<CanEditAddress>0</CanEditAddress>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
                     "</Amount>" +
-                    "<Name>" +
-                    "<Surname>Медведев</Surname>" +
-                    "<FirstName>Дмитрий</FirstName>" +
-                    "<Patronymic></Patronymic>" +
-                    "</Name>" +
-                    "<Address>" +
-                    "<City>Минск</City>" +
-                    "<Street></Street>" +
-                    "<House></House>" +
-                    "</Address>" +
-                    "<Info>" +
-                    "<InfoLine>Счёт найден: " + account + "</InfoLine>" +
-                    "<InfoLine>Сумма к оплате: 40,00 BYN</InfoLine>" +
-                    "</Info>" +
+                    "<Name><Surname>Медведев</Surname><FirstName>Дмитрий</FirstName></Name>" +
+                    "<Address><City>Минск</City></Address>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
 
-        log.info("ERIP Final Response (matches demo 2):\n{}", outXml);
+        System.out.println("<<< OUTGOING ERIP XML: " + outXml);
 
-        byte[] outBytes = outXml.getBytes(StandardCharsets.UTF_8);
         response.reset();
         response.setStatus(HttpServletResponse.SC_OK);
         response.addHeader("Access-Control-Allow-Origin", "*");
         response.setContentType("text/xml;charset=UTF-8");
-        response.setContentLength(outBytes.length);
-        try (OutputStream os = response.getOutputStream()) {
-            os.write(outBytes);
-            os.flush();
+        
+        try {
+            byte[] outBytes = outXml.getBytes(StandardCharsets.UTF_8);
+            response.setContentLength(outBytes.length);
+            try (OutputStream os = response.getOutputStream()) {
+                os.write(outBytes);
+                os.flush();
+            }
+        } catch (Exception e) {
+            System.err.println("!!! ERROR SENDING RESPONSE: " + e.getMessage());
         }
     }
 
-    private Map<String, String> parseEripXml(String xml) throws Exception {
+    private Map<String, String> parseEripXml(String xml) {
         Map<String, String> map = new HashMap<>();
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
