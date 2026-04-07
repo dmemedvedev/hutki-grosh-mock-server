@@ -56,7 +56,7 @@ public class EripXmlController {
         } else if ("TransactionResult".equals(type)) {
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>TransactionResult</ResponseType></ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Universal "Catch-all" response
+            // ServiceInfo - Aligned with Hutki Grosh JSON cabinet structure
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
@@ -66,9 +66,9 @@ public class EripXmlController {
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Surname>Медведев</Surname>" +
+                    "<LastName>Медведев</LastName>" +
                     "<FirstName>Дмитрий</FirstName>" +
-                    "<Patronymic></Patronymic>" +
+                    "<PatronymicName></PatronymicName>" +
                     "<City>Минск</City>" +
                     "<Street></Street>" +
                     "<House></House>" +
@@ -78,7 +78,7 @@ public class EripXmlController {
                     "<Amount>40.00</Amount>" +
                     "<Sum>40.00</Sum>" +
                     "<Debt>40.00</Debt>" +
-                    "<CanEditAmount>1</CanEditAmount>" +
+                    "<CanEditAmount>0</CanEditAmount>" +
                     "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
