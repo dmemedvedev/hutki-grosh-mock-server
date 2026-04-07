@@ -56,7 +56,7 @@ public class EripXmlController {
         } else if ("TransactionResult".equals(type)) {
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>TransactionResult</ResponseType></ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Aligned with Hutki Grosh JSON cabinet structure
+            // ServiceInfo - Aggressive tag doubling for compatibility
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
@@ -67,18 +67,24 @@ public class EripXmlController {
                     "<ResponseType>ServiceInfo</ResponseType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<LastName>Медведев</LastName>" +
+                    "<lastName>Медведев</lastName>" +
+                    "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
+                    "<firstName>Дмитрий</firstName>" +
                     "<PatronymicName></PatronymicName>" +
+                    "<patronymicName></patronymicName>" +
                     "<City>Минск</City>" +
-                    "<Street></Street>" +
-                    "<House></House>" +
-                    "<Building></Building>" +
-                    "<Apartment></Apartment>" +
+                    "<city>Минск</city>" +
                     "<Currency>933</Currency>" +
+                    "<currency>BYN</currency>" +
                     "<Amount>40.00</Amount>" +
-                    "<Sum>40.00</Sum>" +
+                    "<amount>40.00</amount>" +
                     "<Debt>40.00</Debt>" +
+                    "<debt>40.00</debt>" +
+                    "<Sum>40.00</Sum>" +
+                    "<sum>40.00</sum>" +
                     "<CanEditAmount>0</CanEditAmount>" +
+                    "<editableAmount>N</editableAmount>" +
                     "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
