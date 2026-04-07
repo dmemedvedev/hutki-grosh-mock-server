@@ -45,16 +45,53 @@ public class EripXmlController {
         String account = data.getOrDefault("PersonalAccount", "unknown");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
 
-        log.info("ERIP: type={}, account={}, requestId={}", type, account, requestId);
+        log.info("ERIP: type={}, account={}, requestId={}, serviceNo={}", type, account, requestId, serviceNo);
 
+        String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String outXml;
+        
+        if ("TransactionStart".equals(type)) {
+            String myTrxId = "MOCK-TX-" + System.currentTimeMillis();
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<ResponseType>TransactionStart</ResponseType>" +
+                    "<TransactionStart>" +
+                    "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
+                    "</TransactionStart>" +
+                    "</ServiceProvider_Response>";
+        } else if ("TransactionResult".equals(type)) {
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<ResponseType>TransactionResult</ResponseType>" +
+                    "</ServiceProvider_Response>";
+        } else {
+            // ServiceInfo
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<DateTime>" + now + "</DateTime>" +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<ResponseType>ServiceInfo</ResponseType>" +
+                    "<PersonalAccount>" + account + "</PersonalAccount>" +
+                    "<Currency>933</Currency>" +
+                    "<Amount>40.00</Amount>" +
+                    "<CanEditAmount>1</CanEditAmount>" +
+                    "<Surname>Медведев</Surname><FirstName>Дмитрий</FirstName>" +
+                    "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
+                    "</ServiceProvider_Response>";
+        }
 
-        String outXml = switch (type) {
-            case "TransactionStart" -> buildTransactionStartResponse(requestId, serviceNo);
-            case "TransactionResult" -> buildTransactionResultResponse(requestId, serviceNo);
-            default -> buildServiceInfoResponse(account, requestId, serviceNo);
-        };
-
-        log.info("ERIP Response:\n{}", outXml);
+        log.info("ERIP Final Response (matches demo 2):\n{}", outXml);
 
         byte[] outBytes = outXml.getBytes(StandardCharsets.UTF_8);
         response.reset();
@@ -66,66 +103,6 @@ public class EripXmlController {
             os.write(outBytes);
             os.flush();
         }
-    }
-
-    private String buildServiceInfoResponse(String account, String requestId, String serviceNo) {
-        String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        double amount = "0000000".equals(account) ? -1 : 40.00;
-
-        if (amount < 0) {
-            return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>1</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<ErrorText>Лицевой счёт " + account + " не найден.</ErrorText>" +
-                    "</ServiceProvider_Response>";
-        }
-
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
-                "<Status>0</Status>" +
-                "<DateTime>" + now + "</DateTime>" +
-                "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                "<ResponseType>ServiceInfo</ResponseType>" +
-                "<PersonalAccount>" + account + "</PersonalAccount>" +
-                "<Currency>933</Currency>" +
-                "<Amount>40.00</Amount>" +
-                "<CanEditAmount>1</CanEditAmount>" +
-                "<Surname>Медведев</Surname><FirstName>Дмитрий</FirstName>" +
-                "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
-                "</ServiceProvider_Response>";
-    }
-
-    private String buildTransactionStartResponse(String requestId, String serviceNo) {
-        String myTrxId = "MOCK-TX-" + System.currentTimeMillis();
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
-                "<Status>0</Status>" +
-                "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                "<ResponseType>TransactionStart</ResponseType>" +
-                "<TransactionStart>" +
-                "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                "</TransactionStart>" +
-                "</ServiceProvider_Response>";
-    }
-
-    private String buildTransactionResultResponse(String requestId, String serviceNo) {
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
-                "<Status>0</Status>" +
-                "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                "<ResponseType>TransactionResult</ResponseType>" +
-                "</ServiceProvider_Response>";
     }
 
     private Map<String, String> parseEripXml(String xml) throws Exception {
