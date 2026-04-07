@@ -7,4 +7,5 @@
 /Users/dmitriymedvedev/.gemini/antigravity/scratch/hutki-grosh-mock-server/src/main/java/by/hgrosh/mockserver/MockServerApplication.java
 /Users/dmitriymedvedev/.gemini/antigravity/scratch/hutki-grosh-mock-server/src/main/java/by/hgrosh/mockserver/dto/ParameterDTO.java
 /Users/dmitriymedvedev/.gemini/antigravity/scratch/hutki-grosh-mock-server/src/main/java/by/hgrosh/mockserver/controller/DashboardController.java
+/Users/dmitriymedvedev/.gemini/antigravity/scratch/hutki-grosh-mock-server/src/main/java/by/hgrosh/mockserver/controller/EripXmlController.java
 /Users/dmitriymedvedev/.gemini/antigravity/scratch/hutki-grosh-mock-server/src/main/java/by/hgrosh/mockserver/service/MockBillingService.java

@@ -1,4 +1,5 @@
 by/hgrosh/mockserver/dto/HutkiRequest.class
+by/hgrosh/mockserver/controller/EripXmlController.class
 by/hgrosh/mockserver/controller/HutkiGroshController.class
 by/hgrosh/mockserver/dto/HutkiResponse.class
 by/hgrosh/mockserver/dto/ParameterDTO.class
