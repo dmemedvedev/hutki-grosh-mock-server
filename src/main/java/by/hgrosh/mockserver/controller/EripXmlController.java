@@ -52,43 +52,12 @@ public class EripXmlController {
         
         if ("TransactionStart".equals(type)) {
             String myTrxId = "MOCK-TX-" + System.currentTimeMillis();
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionStart</ResponseType>" +
-                    "<TransactionStart>" +
-                    "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                    "</TransactionStart>" +
-                    "</ServiceProvider_Response>";
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>TransactionStart</ResponseType><TransactionStart><ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId></TransactionStart></ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionResult</ResponseType>" +
-                    "</ServiceProvider_Response>";
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>TransactionResult</ResponseType></ServiceProvider_Response>";
         } else {
             // ServiceInfo
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Currency>933</Currency>" +
-                    "<Amount>40.00</Amount>" +
-                    "<CanEditAmount>1</CanEditAmount>" +
-                    "<Surname>Медведев</Surname><FirstName>Дмитрий</FirstName>" +
-                    "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
-                    "</ServiceProvider_Response>";
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><DateTime>" + now + "</DateTime><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>ServiceInfo</ResponseType><PersonalAccount>" + account + "</PersonalAccount><Currency>933</Currency><Amount>40.00</Amount><CanEditAmount>1</CanEditAmount><Surname>Медведев</Surname><FirstName>Дмитрий</FirstName><ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo></ServiceProvider_Response>";
         }
 
         log.info("ERIP Final Response (matches demo 2):\n{}", outXml);
