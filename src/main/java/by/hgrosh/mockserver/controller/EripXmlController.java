@@ -73,7 +73,7 @@ public class EripXmlController {
                     "</ServiceProvider_Response>";
         } else {
             // ServiceInfo - Total Hybrid (Session Meta + Root Fields + Nested Structure)
-            outXml = "<?xml version=\"1.0\" encoding=\"windows-1251\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -84,7 +84,7 @@ public class EripXmlController {
                     "<Currency>933</Currency>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
                     "<Amount>40,00</Amount>" +
-                    "<CanEditAmount>0</CanEditAmount>" +
+                    "<CanEditAmount>1</CanEditAmount>" +
                     "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
                     "<Patronymic></Patronymic>" +
