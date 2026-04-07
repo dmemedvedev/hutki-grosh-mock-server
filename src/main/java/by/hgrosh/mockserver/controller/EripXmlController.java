@@ -57,7 +57,7 @@ public class EripXmlController {
         
         if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -68,7 +68,7 @@ public class EripXmlController {
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -76,27 +76,32 @@ public class EripXmlController {
                     "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            // ServiceInfo - Strict Page 18 Canonical Format
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     "<DateTime>" + now + "</DateTime>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Currency>933</Currency>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<Amount>40,00</Amount>" +
-                    "<CanEditAmount>1</CanEditAmount>" +
-                    "<CanEditName>0</CanEditName>" +
-                    "<CanEditAddress>0</CanEditAddress>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
                     "</Amount>" +
-                    "<Name><Surname>Медведев</Surname><FirstName>Дмитрий</FirstName></Name>" +
-                    "<Address><City>Минск</City></Address>" +
-                    "<Agent>" + agent + "</Agent>" +
+                    "<Name>" +
+                    "<Surname>Медведев</Surname>" +
+                    "<FirstName>Дмитрий</FirstName>" +
+                    "<Patronymic></Patronymic>" +
+                    "</Name>" +
+                    "<Address>" +
+                    "<City>Минск</City>" +
+                    "<Street></Street>" +
+                    "<House></House>" +
+                    "<Building></Building>" +
+                    "<Apartment></Apartment>" +
+                    "</Address>" +
+                    "<Info>" +
+                    "<InfoLine>Счёт найден</InfoLine>" +
+                    "</Info>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
