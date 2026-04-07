@@ -69,11 +69,16 @@ public class EripXmlController {
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
+                    "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Strict ERIP Protocol (as per manual page 18)
+            // ServiceInfo - Strict ERIP Protocol with Session Meta
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<DateTime>" + now + "</DateTime>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
