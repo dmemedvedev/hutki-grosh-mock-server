@@ -50,13 +50,14 @@ public class EripXmlController {
         String requestId = data.getOrDefault("RequestId", "0");
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
+        String agent = data.getOrDefault("Agent", "999");
 
         String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         String outXml;
         
         if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -67,7 +68,7 @@ public class EripXmlController {
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -75,7 +76,7 @@ public class EripXmlController {
                     "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -95,6 +96,7 @@ public class EripXmlController {
                     "</Amount>" +
                     "<Name><Surname>Медведев</Surname><FirstName>Дмитрий</FirstName></Name>" +
                     "<Address><City>Минск</City></Address>" +
+                    "<Agent>" + agent + "</Agent>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
@@ -104,10 +106,10 @@ public class EripXmlController {
         response.reset();
         response.setStatus(HttpServletResponse.SC_OK);
         response.addHeader("Access-Control-Allow-Origin", "*");
-        response.setContentType("text/xml;charset=UTF-8");
+        response.setContentType("text/xml;charset=windows-1251");
         
         try {
-            byte[] outBytes = outXml.getBytes(StandardCharsets.UTF_8);
+            byte[] outBytes = outXml.getBytes("windows-1251");
             response.setContentLength(outBytes.length);
             try (OutputStream os = response.getOutputStream()) {
                 os.write(outBytes);
@@ -124,7 +126,7 @@ public class EripXmlController {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = {"RequestType", "PersonalAccount", "RequestId", "ServiceNo"};
+            String[] tags = {"RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent"};
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
