@@ -56,36 +56,28 @@ public class EripXmlController {
         } else if ("TransactionResult".equals(type)) {
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response><Version>1</Version><RequestId>" + requestId + "</RequestId><Status>0</Status><ServiceNo>" + serviceNo + "</ServiceNo><ResponseType>TransactionResult</ResponseType></ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Aggressive tag doubling for compatibility
+            // ServiceInfo - Strict ERIP Protocol (as per manual page 18)
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<LastName>Медведев</LastName>" +
-                    "<lastName>Медведев</lastName>" +
+                    "<ServiceInfo>" +
+                    "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Debt>40,00</Debt>" +
+                    "</Amount>" +
+                    "<Name>" +
                     "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
-                    "<firstName>Дмитрий</firstName>" +
-                    "<PatronymicName></PatronymicName>" +
-                    "<patronymicName></patronymicName>" +
+                    "<Patronymic></Patronymic>" +
+                    "</Name>" +
+                    "<Address>" +
                     "<City>Минск</City>" +
-                    "<city>Минск</city>" +
-                    "<Currency>933</Currency>" +
-                    "<currency>BYN</currency>" +
-                    "<Amount>40.00</Amount>" +
-                    "<amount>40.00</amount>" +
-                    "<Debt>40.00</Debt>" +
-                    "<debt>40.00</debt>" +
-                    "<Sum>40.00</Sum>" +
-                    "<sum>40.00</sum>" +
-                    "<CanEditAmount>0</CanEditAmount>" +
-                    "<editableAmount>N</editableAmount>" +
-                    "<ServiceInfo><Ticket>Счёт найден: " + account + ". Задолженность: 40.00 BYN</Ticket></ServiceInfo>" +
+                    "<Street></Street>" +
+                    "<House></House>" +
+                    "</Address>" +
+                    "<Info>" +
+                    "<InfoLine>Счёт найден: " + account + "</InfoLine>" +
+                    "<InfoLine>Сумма к оплате: 40,00 BYN</InfoLine>" +
+                    "</Info>" +
+                    "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
 
