@@ -23,7 +23,7 @@ public class HutkiGroshController {
         this.objectMapper = objectMapper;
     }
 
-    @PostMapping({"", "/info", "/submit", "/commit"})
+    @PostMapping(value = {"", "/info", "/submit", "/commit"}, consumes = "application/json")
     public HutkiResponse handleRequest(
             HttpServletRequest request,
             @RequestHeader(value = "DigestUtils.md5Hex", required = false) String signature

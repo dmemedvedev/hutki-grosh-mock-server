@@ -26,7 +26,7 @@ public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
 
-    @PostMapping(value = {"/erip", "/api", "/api/erip"},
+    @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"},
             consumes = {"application/x-www-form-urlencoded", "multipart/form-data", "*/*"})
     public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String xmlIn = request.getParameter("XML");
