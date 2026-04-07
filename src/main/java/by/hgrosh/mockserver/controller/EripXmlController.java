@@ -29,6 +29,14 @@ public class EripXmlController {
     @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"}, 
             consumes = {"application/x-www-form-urlencoded", "multipart/form-data", "*/*"})
     public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) {
+        // Header Sniffing
+        System.out.println("--- REQUEST HEADERS ---");
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String name = headerNames.nextElement();
+            System.out.println(name + ": " + request.getHeader(name));
+        }
+
         String xmlIn = request.getParameter("XML");
         System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
         
@@ -48,7 +56,7 @@ public class EripXmlController {
         
         if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -59,7 +67,7 @@ public class EripXmlController {
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -67,7 +75,7 @@ public class EripXmlController {
                     "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -77,10 +85,8 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
-                    "<Amount>40.00</Amount>" +
+                    "<Amount>40,00</Amount>" +
                     "<CanEditAmount>1</CanEditAmount>" +
-                    "<Surname>Медведев</Surname>" +
-                    "<FirstName>Дмитрий</FirstName>" +
                     "<CanEditName>0</CanEditName>" +
                     "<CanEditAddress>0</CanEditAddress>" +
                     "<ServiceInfo>" +
