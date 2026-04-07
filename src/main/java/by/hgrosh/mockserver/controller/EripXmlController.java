@@ -72,8 +72,8 @@ public class EripXmlController {
                     "<TransactionResult />" +
                     "</ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Ultimate Hybrid (Strict Nesting + Legacy Meta)
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            // ServiceInfo - Total Hybrid (Session Meta + Root Fields + Nested Structure)
+            outXml = "<?xml version=\"1.0\" encoding=\"windows-1251\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -83,7 +83,13 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
+                    "<Amount>40,00</Amount>" +
                     "<CanEditAmount>0</CanEditAmount>" +
+                    "<Surname>Медведев</Surname>" +
+                    "<FirstName>Дмитрий</FirstName>" +
+                    "<Patronymic></Patronymic>" +
+                    "<CanEditName>0</CanEditName>" +
+                    "<CanEditAddress>0</CanEditAddress>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
