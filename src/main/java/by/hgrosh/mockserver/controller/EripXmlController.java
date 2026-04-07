@@ -51,16 +51,25 @@ public class EripXmlController {
         String outXml;
         
         if ("TransactionStart".equals(type)) {
-            String myTrxId = "MOCK-" + (System.currentTimeMillis() % 1000000);
+            // Numeric TrxId (N12)
+            String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
                     "<Info><InfoLine>Оплата инициирована. Номер: " + myTrxId + "</InfoLine></Info>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ServiceProvider_Response />";
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "</ServiceProvider_Response>";
         } else {
             // ServiceInfo - Strict ERIP Protocol (as per manual page 18)
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
