@@ -25,6 +25,12 @@ import java.util.*;
 public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
+    public static final List<String> xmlLogs = new ArrayList<>();
+
+    @GetMapping("/logs-xml")
+    public List<String> getXmlLogs() {
+        return xmlLogs;
+    }
 
     @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"}, 
             consumes = {"application/x-www-form-urlencoded", "multipart/form-data", "*/*"})
@@ -49,6 +55,10 @@ public class EripXmlController {
         }
 
         System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
+        if (xmlIn != null) {
+            xmlLogs.add(0, new Date().toString() + "\n" + xmlIn);
+            if (xmlLogs.size() > 50) xmlLogs.remove(xmlLogs.size() - 1);
+        }
         
         Map<String, String> data = parseEripXml(xmlIn != null ? xmlIn : "");
         String type = data.getOrDefault("RequestType", "ServiceInfo");
