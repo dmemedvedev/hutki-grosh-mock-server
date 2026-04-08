@@ -38,21 +38,29 @@ public class EripXmlController {
         }
 
         String xmlIn = request.getParameter("XML");
-        System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
         
+        // Fallback: Read raw body if parameter is missing
         if (xmlIn == null || xmlIn.isEmpty()) {
-            System.out.println("!!! WARNING: Incoming XML is empty");
-            return;
+            try {
+                xmlIn = request.getReader().lines().collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+            } catch (Exception e) {
+                System.out.println("Error reading raw body: " + e.getMessage());
+            }
         }
 
-        Map<String, String> data = parseEripXml(xmlIn);
+        System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
+        
+        Map<String, String> data = parseEripXml(xmlIn != null ? xmlIn : "");
         String type = data.getOrDefault("RequestType", "ServiceInfo");
         String requestId = data.getOrDefault("RequestId", "0");
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String agent = data.getOrDefault("Agent", "999");
 
-        String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+        sdf.setTimeZone(TimeZone.getTimeZone("Europe/Minsk"));
+        String now = sdf.format(new Date());
+        
         String outXml;
         
         if ("TransactionStart".equals(type)) {
