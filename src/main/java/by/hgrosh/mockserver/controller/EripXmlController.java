@@ -68,7 +68,7 @@ public class EripXmlController {
         String agent = data.getOrDefault("Agent", "999");
         String sessionId = data.get("SessionId");
         if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = "MOCK-SESSION-" + UUID.randomUUID().toString();
+            sessionId = String.valueOf(System.currentTimeMillis());
         }
         String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
         String payAmount = data.get("PayAmount");
