@@ -12,13 +12,13 @@ import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
  * Handles ERIP XML protocol requests from Hutki Grosh system.
- * Accepts form-data POST with "XML" parameter containing XML payload.
+ * Supports ServiceInfo (search) and Pay (payment) types.
  */
 @RestController
 @CrossOrigin(origins = "*")
@@ -26,16 +26,18 @@ public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
     public static final List<String> xmlLogs = new ArrayList<>();
+    private static final String ENCODING = "WINDOWS-1251";
 
     @GetMapping("/logs-xml")
     public List<String> getXmlLogs() {
         return xmlLogs;
     }
 
-    @PostMapping(value = {"", "/", "/erip", "/api", "/api/erip"}, 
-            consumes = {"application/x-www-form-urlencoded", "multipart/form-data", "*/*"})
+    @PostMapping(value = { "", "/", "/erip", "/api", "/api/erip" }, consumes = { "application/x-www-form-urlencoded",
+            "multipart/form-data", "*/*" })
     public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) {
-        // Header Sniffing
+
+        // 1. Логируем заголовки (для отладки)
         System.out.println("--- REQUEST HEADERS ---");
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -43,132 +45,142 @@ public class EripXmlController {
             System.out.println(name + ": " + request.getHeader(name));
         }
 
+        // 2. Получаем XML из параметра или сырого тела
         String xmlIn = request.getParameter("XML");
-        
-        // Fallback: Read raw body if parameter is missing
         if (xmlIn == null || xmlIn.isEmpty()) {
             try {
-                xmlIn = request.getReader().lines().collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+                xmlIn = request.getReader().lines()
+                        .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
             } catch (Exception e) {
-                System.out.println("Error reading raw body: " + e.getMessage());
+                log.error("Error reading raw body: " + e.getMessage());
             }
         }
 
-        System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
-        if (xmlIn != null) {
+        if (xmlIn != null && !xmlIn.isEmpty()) {
+            System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
             xmlLogs.add(0, new Date().toString() + "\n" + xmlIn);
-            if (xmlLogs.size() > 50) xmlLogs.remove(xmlLogs.size() - 1);
+            if (xmlLogs.size() > 50)
+                xmlLogs.remove(xmlLogs.size() - 1);
         }
-        
+
+        // 3. Парсим входящий XML
         Map<String, String> data = parseEripXml(xmlIn != null ? xmlIn : "");
         String type = data.getOrDefault("RequestType", "ServiceInfo");
-        String requestId = data.getOrDefault("RequestId", "0");
+        String rawRequestId = data.getOrDefault("RequestId", "");
+        String requestId = (rawRequestId.matches("\\d+") && !rawRequestId.isEmpty()) ? rawRequestId : String.valueOf(System.currentTimeMillis() % 1000000);
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
-        String agent = data.getOrDefault("Agent", "999");
-        String sessionId = data.get("SessionId");
-        if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = String.valueOf(System.currentTimeMillis());
-        }
-        String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
-        String payAmount = data.get("PayAmount");
-        String payAmountXml = payAmount != null && !payAmount.isEmpty() ? "<PayAmount>" + payAmount + "</PayAmount>" : "";
+        String sessionId = data.getOrDefault("SessionId", String.valueOf(System.currentTimeMillis()));
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
         sdf.setTimeZone(TimeZone.getTimeZone("Europe/Minsk"));
         String now = sdf.format(new Date());
-        
+
+        // 4. Формируем ответ на основе RequestType
         String outXml;
-        
-        if ("TransactionStart".equals(type)) {
-            String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionStart</ResponseType>" +
-                    "<TransactionStart>" +
-                    "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                    "<Info><InfoLine>TX: " + myTrxId + "</InfoLine></Info>" +
-                    "</TransactionStart>" +
-                    "</ServiceProvider_Response>";
-        } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionResult</ResponseType>" +
-                    "</ServiceProvider_Response>";
-        } else {
-            // ServiceInfo - Canonical Nested Structure + Root Session Metadata
+
+        if ("Pay".equals(type)) {
+            // ФИНАЛЬНЫЙ ШАГ ОПЛАТЫ
+            String paymentNo = "PAY-" + (System.currentTimeMillis() / 1000);
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     "<DateTime>" + now + "</DateTime>" +
-                    sessionXml +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<RequestType>Pay</RequestType>" +
+                    "<PersonalAccount>" + account + "</PersonalAccount>" +
+                    "<PaymentNo>" + paymentNo + "</PaymentNo>" + // Обязательно для Pay
+                    "<Amount>40.00</Amount>" +
+                    "<Ticket>" +
+                    "<Line>Оплата принята успешно</Line>" +
+                    "<Line>Номер чека: " + paymentNo + "</Line>" +
+                    "</Ticket>" +
+                    "</ServiceProvider_Response>";
+
+        } else if ("TransactionStart".equals(type)) {
+            String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<RequestType>TransactionStart</RequestType>" +
+                    "<TransactionStart>" +
+                    "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
+                    "</TransactionStart>" +
+                    "</ServiceProvider_Response>";
+
+        } else if ("TransactionResult".equals(type)) {
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<RequestType>TransactionResult</RequestType>" +
+                    "</ServiceProvider_Response>";
+
+        } else {
+            // DEFAULT: ServiceInfo (Поиск счета)
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                    "<ServiceProvider_Response>" +
+                    "<Version>1</Version>" +
+                    "<RequestId>" + requestId + "</RequestId>" +
+                    "<Status>0</Status>" +
+                    "<DateTime>" + now + "</DateTime>" +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
+                    "<RequestType>ServiceInfo</RequestType>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
                     "<Penalty>0,00</Penalty>" +
-                    payAmountXml +
                     "</Amount>" +
                     "<Name>" +
                     "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
-                    "<Patronymic></Patronymic>" +
+                    "<Patronymic>Эдуардович</Patronymic>" +
                     "</Name>" +
-                    "<Address>" +
-                    "<City>Минск</City>" +
-                    "<Street></Street>" +
-                    "<House></House>" +
-                    "<Building></Building>" +
-                    "<Apartment></Apartment>" +
-                    "</Address>" +
-                    "<Info>" +
-                    "<InfoLine>Счёт найден</InfoLine>" +
-                    "</Info>" +
+                    "<Address><City>Минск</City><Street>Скрыганова</Street><House>6</House></Address>" +
+                    "<Info><InfoLine>Счёт найден</InfoLine></Info>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
 
         System.out.println("<<< OUTGOING ERIP XML: " + outXml);
 
-        response.reset();
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.addHeader("Access-Control-Allow-Origin", "*");
-        response.setContentType("text/xml;charset=windows-1251");
-        
+        // 5. Отправка ответа в правильной кодировке
         try {
-            byte[] outBytes = outXml.getBytes("windows-1251");
+            byte[] outBytes = outXml.getBytes(ENCODING);
+            response.reset();
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.addHeader("Access-Control-Allow-Origin", "*");
+            response.setContentType("text/xml;charset=windows-1251");
             response.setContentLength(outBytes.length);
+
             try (OutputStream os = response.getOutputStream()) {
                 os.write(outBytes);
                 os.flush();
             }
         } catch (Exception e) {
-            System.err.println("!!! ERROR SENDING RESPONSE: " + e.getMessage());
+            log.error("!!! ERROR SENDING RESPONSE: " + e.getMessage());
         }
     }
 
     private Map<String, String> parseEripXml(String xml) {
         Map<String, String> map = new HashMap<>();
+        if (xml == null || xml.isEmpty())
+            return map;
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = {"RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount"};
+            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId",
+                    "PayAmount" };
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
