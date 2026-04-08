@@ -56,6 +56,8 @@ public class EripXmlController {
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String agent = data.getOrDefault("Agent", "999");
+        String sessionId = data.get("SessionId");
+        String sessionXml = sessionId != null && !sessionId.isEmpty() ? "<SessionId>" + sessionId + "</SessionId>" : "";
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
         sdf.setTimeZone(TimeZone.getTimeZone("Europe/Minsk"));
@@ -70,6 +72,7 @@ public class EripXmlController {
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
+                    sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
@@ -83,6 +86,7 @@ public class EripXmlController {
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
+                    sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<ResponseType>TransactionResult</ResponseType>" +
                     "</ServiceProvider_Response>";
@@ -94,6 +98,7 @@ public class EripXmlController {
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     "<DateTime>" + now + "</DateTime>" +
+                    sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
@@ -146,7 +151,7 @@ public class EripXmlController {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = {"RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent"};
+            String[] tags = {"RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount"};
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
