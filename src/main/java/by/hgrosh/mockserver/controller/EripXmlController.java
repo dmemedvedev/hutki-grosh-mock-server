@@ -71,10 +71,7 @@ public class EripXmlController {
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String sessionId = data.get("SessionId");
-        if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = String.valueOf(System.currentTimeMillis());
-        }
-        String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
+        String sessionXml = sessionId != null && !sessionId.isEmpty() ? "<SessionId>" + sessionId + "</SessionId>" : "";
 
         String payAmount = data.get("PayAmount");
         String payAmountXml = payAmount != null && !payAmount.isEmpty() ? "<PayAmount>" + payAmount + "</PayAmount>" : "";
@@ -97,7 +94,7 @@ public class EripXmlController {
                     "<DateTime>" + now + "</DateTime>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>Pay</ResponseType>" +
+                    "<RequestType>Pay</RequestType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<PaymentNo>" + paymentNo + "</PaymentNo>" + // Обязательно для Pay
                     "<Amount>40.00</Amount>" +
@@ -116,7 +113,7 @@ public class EripXmlController {
                     "<Status>0</Status>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionStart</ResponseType>" +
+                    "<RequestType>TransactionStart</RequestType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
                     "</TransactionStart>" +
@@ -130,7 +127,7 @@ public class EripXmlController {
                     "<Status>0</Status>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>TransactionResult</ResponseType>" +
+                    "<RequestType>TransactionResult</RequestType>" +
                     "</ServiceProvider_Response>";
 
         } else {
@@ -145,11 +142,11 @@ public class EripXmlController {
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
+                    "<RequestType>ServiceInfo</RequestType>" +
                     "<ServiceInfo>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
-                    "<Debt>40,00</Debt>" +
-                    "<Penalty>0,00</Penalty>" +
+                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
+                    "<Debt>40.00</Debt>" +
+                    "<Penalty>0.00</Penalty>" +
                     payAmountXml +
                     "</Amount>" +
                     "<Name>" +
