@@ -58,6 +58,8 @@ public class EripXmlController {
         String agent = data.getOrDefault("Agent", "999");
         String sessionId = data.get("SessionId");
         String sessionXml = sessionId != null && !sessionId.isEmpty() ? "<SessionId>" + sessionId + "</SessionId>" : "";
+        String payAmount = data.get("PayAmount");
+        String payAmountXml = payAmount != null && !payAmount.isEmpty() ? "<PayAmount>" + payAmount + "</PayAmount>" : "";
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
         sdf.setTimeZone(TimeZone.getTimeZone("Europe/Minsk"));
@@ -106,6 +108,7 @@ public class EripXmlController {
                     "<ServiceInfo>" +
                     "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
                     "<Debt>40,00</Debt>" +
+                    payAmountXml +
                     "</Amount>" +
                     "<Name>" +
                     "<Surname>Медведев</Surname>" +
