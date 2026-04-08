@@ -57,7 +57,7 @@ public class EripXmlController {
         
         if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000); 
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -66,10 +66,11 @@ public class EripXmlController {
                     "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
+                    "<Info><InfoLine>TX: " + myTrxId + "</InfoLine></Info>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -78,21 +79,37 @@ public class EripXmlController {
                     "<ResponseType>TransactionResult</ResponseType>" +
                     "</ServiceProvider_Response>";
         } else {
-            // ServiceInfo - Proven Legacy Format
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?>" +
+            // ServiceInfo - Canonical Nested Structure + Root Session Metadata
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     "<DateTime>" + now + "</DateTime>" +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
-                    "<Amount>40.00</Amount>" +
-                    "<CanEditAmount>1</CanEditAmount>" +
-                    "<Surname>Медведев</Surname><FirstName>Дмитрий</FirstName>" +
-                    "<ServiceInfo><Ticket>Счет найден: " + account + "</Ticket></ServiceInfo>" +
+                    "<ResponseType>ServiceInfo</ResponseType>" +
+                    "<ServiceInfo>" +
+                    "<Amount Editable=\"N\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Debt>40,00</Debt>" +
+                    "</Amount>" +
+                    "<Name>" +
+                    "<Surname>Медведев</Surname>" +
+                    "<FirstName>Дмитрий</FirstName>" +
+                    "<Patronymic></Patronymic>" +
+                    "</Name>" +
+                    "<Address>" +
+                    "<City>Минск</City>" +
+                    "<Street></Street>" +
+                    "<House></House>" +
+                    "<Building></Building>" +
+                    "<Apartment></Apartment>" +
+                    "</Address>" +
+                    "<Info>" +
+                    "<InfoLine>Счёт найден</InfoLine>" +
+                    "</Info>" +
+                    "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
 
