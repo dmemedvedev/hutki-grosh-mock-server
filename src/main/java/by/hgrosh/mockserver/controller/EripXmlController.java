@@ -74,7 +74,7 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String sessionId = data.get("SessionId");
         if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = String.valueOf(System.currentTimeMillis() / 1000);
+            sessionId = UUID.randomUUID().toString();
         }
         String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
 
@@ -159,7 +159,7 @@ public class EripXmlController {
                     "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
                     "<Agent>999</Agent>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
                     "<Currency>933</Currency>" +
                     "<Debt>40,00</Debt>" +
                     "<Penalty>0,00</Penalty>" +
