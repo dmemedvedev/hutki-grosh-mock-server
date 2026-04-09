@@ -151,11 +151,9 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<RequestType>ServiceInfo</RequestType>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Amount Editable=\"Y\">" +
                     "<Debt>40,00</Debt>" +
-                    "<Penalty>0,00</Penalty>" +
                     "<PayAmount>40,00</PayAmount>" +
                     "</Amount>" +
                     "<Name>" +
@@ -163,8 +161,8 @@ public class EripXmlController {
                     "<FirstName>Дмитрий</FirstName>" +
                     "<Patronymic>Эдуардович</Patronymic>" +
                     "</Name>" +
-                    "<Address><City>Минск</City><Street>Скрыганова</Street><House>6</House></Address>" +
-                    "<Info><InfoLine>Счёт найден</InfoLine></Info>" +
+                    "<Address><City>Минск</City><Street>Скрыганова</Street></Address>" +
+                    "<Info><Line>Счёт найден</Line></Info>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
