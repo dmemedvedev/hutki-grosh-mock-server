@@ -112,6 +112,10 @@ public class EripXmlController {
 
         } else if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
+            String reqAmount = data.get("Amount");
+            if (reqAmount == null) reqAmount = data.get("PayAmount");
+            String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
+
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
                     "<Version>1</Version>" +
@@ -123,6 +127,7 @@ public class EripXmlController {
                     "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
+                    amountXml +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
 
@@ -201,7 +206,7 @@ public class EripXmlController {
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
             String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId",
-                    "PayAmount" };
+                    "PayAmount", "Amount" };
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
