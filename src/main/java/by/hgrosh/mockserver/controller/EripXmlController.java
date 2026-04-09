@@ -140,13 +140,12 @@ public class EripXmlController {
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<RequestType>TransactionResult</RequestType>" +
-                    "<ResponseType>TransactionResult</ResponseType>" +
                     "</ServiceProvider_Response>";
 
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
+                    "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
@@ -156,10 +155,10 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<RequestType>ServiceInfo</RequestType>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
                     "<Agent>999</Agent>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
+                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Currency>933</Currency>" +
                     "<Debt>40,00</Debt>" +
                     "<Penalty>0,00</Penalty>" +
                     "<PayAmount>40,00</PayAmount>" +
