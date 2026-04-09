@@ -116,7 +116,7 @@ public class EripXmlController {
             if (reqAmount == null) reqAmount = data.get("PayAmount");
             String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
 
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
