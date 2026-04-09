@@ -92,7 +92,7 @@ public class EripXmlController {
             // ФИНАЛЬНЫЙ ШАГ ОПЛАТЫ
             String paymentNo = "PAY-" + (System.currentTimeMillis() / 1000);
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
+                    "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
@@ -117,7 +117,7 @@ public class EripXmlController {
             String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
 
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
+                    "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
@@ -133,7 +133,7 @@ public class EripXmlController {
 
         } else if ("TransactionResult".equals(type)) {
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
+                    "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
@@ -146,7 +146,7 @@ public class EripXmlController {
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
+                    "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
