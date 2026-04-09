@@ -37,13 +37,14 @@ public class EripXmlController {
             "multipart/form-data", "*/*" })
     public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) {
 
-        // 1. Логируем заголовки (для отладки)
-        System.out.println("--- REQUEST HEADERS ---");
+        // 1. Собираем заголовки для логов
+        StringBuilder headLog = new StringBuilder("--- HEADERS ---\n");
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String name = headerNames.nextElement();
-            System.out.println(name + ": " + request.getHeader(name));
+            headLog.append(name).append(": ").append(request.getHeader(name)).append("\n");
         }
+        System.out.println(headLog.toString());
 
         // 2. Получаем XML из параметра или сырого тела
         String xmlIn = request.getParameter("XML");
@@ -58,7 +59,8 @@ public class EripXmlController {
 
         if (xmlIn != null && !xmlIn.isEmpty()) {
             System.out.println(">>> INCOMING ERIP XML: " + xmlIn);
-            xmlLogs.add(0, new Date().toString() + "\n" + xmlIn);
+            String logEntry = new Date().toString() + "\n" + headLog.toString() + "\n" + xmlIn;
+            xmlLogs.add(0, logEntry);
             if (xmlLogs.size() > 50)
                 xmlLogs.remove(xmlLogs.size() - 1);
         }
@@ -71,7 +73,10 @@ public class EripXmlController {
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String sessionId = data.get("SessionId");
-        String sessionXml = sessionId != null && !sessionId.isEmpty() ? "<SessionId>" + sessionId + "</SessionId>" : "";
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = "SESS-" + (System.currentTimeMillis() / 1000);
+        }
+        String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
 
         String payAmount = data.get("PayAmount");
         String payAmountXml = payAmount != null && !payAmount.isEmpty() ? "<PayAmount>" + payAmount + "</PayAmount>" : "";
