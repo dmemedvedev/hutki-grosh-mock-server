@@ -152,11 +152,14 @@ public class EripXmlController {
                     "<Currency>933</Currency>" +
                     "<RequestType>ServiceInfo</RequestType>" +
                     "<ServiceInfo>" +
+                    "<Agent>999</Agent>" +
                     "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Currency>933</Currency>" +
                     "<Debt>40,00</Debt>" +
                     "<Penalty>0,00</Penalty>" +
                     "<PayAmount>40,00</PayAmount>" +
                     "</Amount>" +
+                    "<View></View>" +
                     "<Name>" +
                     "<Surname>Медведев</Surname>" +
                     "<FirstName>Дмитрий</FirstName>" +
