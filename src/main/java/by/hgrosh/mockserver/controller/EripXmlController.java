@@ -146,22 +146,31 @@ public class EripXmlController {
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
+                    "<ServiceProvider_Response xmlns=\"http://www.wm.by\">" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     "<DateTime>" + now + "</DateTime>" +
+                    sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<RequestType>ServiceInfo</RequestType>" +
+                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
-                    "<Amount Editable=\"Y\">" +
-                    "<Debt>40</Debt>" +
-                    "<PayAmount>40</PayAmount>" +
+                    "<Agent>999</Agent>" +
+                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
+                    "<Debt>40,00</Debt>" +
+                    "<Penalty>0,00</Penalty>" +
+                    "<PayAmount>40,00</PayAmount>" +
                     "</Amount>" +
-                    "<Name><Surname>Медведев</Surname><FirstName>Дмитрий</FirstName></Name>" +
-                    "<Address><City>Минск</City><Street>Скрыганова</Street></Address>" +
+                    "<View></View>" +
+                    "<Name>" +
+                    "<Surname>Медведев</Surname>" +
+                    "<FirstName>Дмитрий</FirstName>" +
+                    "<Patronymic>Эдуардович</Patronymic>" +
+                    "</Name>" +
+                    "<Address><City>Минск</City><Street>Скрыганова</Street><House>6</House></Address>" +
                     "<Info><InfoLine>Счёт найден</InfoLine></Info>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
