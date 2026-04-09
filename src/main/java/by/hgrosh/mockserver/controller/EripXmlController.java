@@ -26,7 +26,7 @@ public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
     public static final List<String> xmlLogs = new ArrayList<>();
-    private static final String ENCODING = "WINDOWS-1251";
+    private static final String ENCODING = "UTF-8";
 
     @GetMapping("/logs-xml")
     public List<String> getXmlLogs() {
@@ -144,7 +144,7 @@ public class EripXmlController {
 
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -166,12 +166,12 @@ public class EripXmlController {
                     "<PayerNo>" + account + "</PayerNo>" +
                     "<View></View>" +
                     "<Name>" +
-                    "<Surname>Медведев</Surname>" +
-                    "<FirstName>Дмитрий</FirstName>" +
-                    "<Patronymic>Эдуардович</Patronymic>" +
+                    "<Surname>Medvedev</Surname>" +
+                    "<FirstName>Dmitry</FirstName>" +
+                    "<Patronymic>Eduardovich</Patronymic>" +
                     "</Name>" +
-                    "<Address><City>Минск</City><Street>Скрыганова</Street><House>6</House></Address>" +
-                    "<Info><InfoLine>Счёт найден</InfoLine></Info>" +
+                    "<Address><City>Minsk</City><Street>Skryganova</Street><House>6</House></Address>" +
+                    "<Info><InfoLine>Account found</InfoLine></Info>" +
                     "</ServiceInfo>" +
                     "</ServiceProvider_Response>";
         }
@@ -184,7 +184,7 @@ public class EripXmlController {
             response.reset();
             response.setStatus(HttpServletResponse.SC_OK);
             response.addHeader("Access-Control-Allow-Origin", "*");
-            response.setContentType("text/xml;charset=windows-1251");
+            response.setContentType("text/xml;charset=UTF-8");
             response.setContentLength(outBytes.length);
 
             try (OutputStream os = response.getOutputStream()) {
