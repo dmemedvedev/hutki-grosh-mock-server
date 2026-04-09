@@ -74,7 +74,7 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String sessionId = data.get("SessionId");
         if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = UUID.randomUUID().toString();
+            sessionId = String.valueOf((long)(Math.random() * 1000000000L));
         }
         String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
 
