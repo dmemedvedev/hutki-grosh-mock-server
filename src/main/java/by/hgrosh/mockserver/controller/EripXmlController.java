@@ -103,7 +103,7 @@ public class EripXmlController {
                     "<ResponseType>Pay</ResponseType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<PaymentNo>" + paymentNo + "</PaymentNo>" + // Обязательно для Pay
-                    "<Amount>40.00</Amount>" +
+                    "<Amount>40,00</Amount>" +
                     "<Ticket>" +
                     "<Line>Оплата принята успешно</Line>" +
                     "<Line>Номер чека: " + paymentNo + "</Line>" +
@@ -153,10 +153,10 @@ public class EripXmlController {
                     "<RequestType>ServiceInfo</RequestType>" +
                     "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
-                    "<Debt>40.00</Debt>" +
-                    "<Penalty>0.00</Penalty>" +
-                    payAmountXml +
+                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"999999,99\">" +
+                    "<Debt>40,00</Debt>" +
+                    "<Penalty>0,00</Penalty>" +
+                    "<PayAmount>40,00</PayAmount>" +
                     "</Amount>" +
                     "<Name>" +
                     "<Surname>Медведев</Surname>" +
