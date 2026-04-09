@@ -74,7 +74,7 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
         String sessionId = data.get("SessionId");
         if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = "SESS-" + (System.currentTimeMillis() / 1000);
+            sessionId = String.valueOf(System.currentTimeMillis() / 1000);
         }
         String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
 
@@ -100,6 +100,7 @@ public class EripXmlController {
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<RequestType>Pay</RequestType>" +
+                    "<ResponseType>Pay</ResponseType>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<PaymentNo>" + paymentNo + "</PaymentNo>" + // Обязательно для Pay
                     "<Amount>40.00</Amount>" +
@@ -119,6 +120,7 @@ public class EripXmlController {
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<RequestType>TransactionStart</RequestType>" +
+                    "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
                     "</TransactionStart>" +
@@ -133,6 +135,7 @@ public class EripXmlController {
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<RequestType>TransactionResult</RequestType>" +
+                    "<ResponseType>TransactionResult</ResponseType>" +
                     "</ServiceProvider_Response>";
 
         } else {
@@ -148,6 +151,7 @@ public class EripXmlController {
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
                     "<RequestType>ServiceInfo</RequestType>" +
+                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
                     "<Debt>40.00</Debt>" +
