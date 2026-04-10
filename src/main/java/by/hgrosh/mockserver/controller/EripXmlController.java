@@ -114,12 +114,10 @@ public class EripXmlController {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
             String reqAmount = data.get("Amount");
             if (reqAmount == null) reqAmount = data.get("PayAmount");
-            String echoTrxId = data.getOrDefault("TransactionId", myTrxId);
+            String echoTrxId = data.get("TransactionId");
+            if (echoTrxId == null) echoTrxId = myTrxId;
+            
             String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
-
-            if (amountXml.contains("40") && !amountXml.contains(".")) {
-                amountXml = "<Amount>40.00</Amount>";
-            }
 
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
@@ -217,8 +215,7 @@ public class EripXmlController {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId",
-                    "PayAmount", "Amount" };
+            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount", "Amount", "TransactionId" };
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
