@@ -26,7 +26,7 @@ public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
     public static final List<String> xmlLogs = new ArrayList<>();
-    private static final String ENCODING = "UTF-8";
+    private static final String ENCODING = "WINDOWS-1251";
 
     @GetMapping("/logs-xml")
     public List<String> getXmlLogs() {
@@ -72,10 +72,7 @@ public class EripXmlController {
         String requestId = (rawRequestId.matches("\\d+") && !rawRequestId.isEmpty()) ? rawRequestId : String.valueOf(System.currentTimeMillis() % 1000000);
         String account = data.getOrDefault("PersonalAccount", "12345678");
         String serviceNo = data.getOrDefault("ServiceNo", "13381001");
-        String sessionId = data.get("SessionId");
-        if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = String.valueOf((long)(Math.random() * 1000000000L));
-        }
+        String sessionId = "123456789";
         String sessionXml = "<SessionId>" + sessionId + "</SessionId>";
 
         String payAmount = data.get("PayAmount");
@@ -118,11 +115,11 @@ public class EripXmlController {
             if (echoTrxId == null) echoTrxId = myTrxId;
             String echoDateTime = data.getOrDefault("DateTime", now);
             String echoAuthType = data.getOrDefault("AuthorizationType", "999");
+            String echoAgent = data.getOrDefault("Agent", "999");
             
             String amountValue = (reqAmount != null && !reqAmount.isEmpty()) ? reqAmount : "40.00";
-            if (!amountValue.contains(".")) amountValue += ".00";
 
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -138,13 +135,14 @@ public class EripXmlController {
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
                     "<TransactionId>" + echoTrxId + "</TransactionId>" +
                     "<Amount>" + amountValue + "</Amount>" +
+                    "<Agent>" + echoAgent + "</Agent>" +
                     "<AuthorizationType>" + echoAuthType + "</AuthorizationType>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
 
         } else if ("TransactionResult".equals(type)) {
             String echoDateTime = data.getOrDefault("DateTime", now);
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -161,7 +159,7 @@ public class EripXmlController {
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
             String echoDateTime = data.getOrDefault("DateTime", now);
-            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
@@ -201,7 +199,7 @@ public class EripXmlController {
             response.reset();
             response.setStatus(HttpServletResponse.SC_OK);
             response.addHeader("Access-Control-Allow-Origin", "*");
-            response.setContentType("text/xml;charset=UTF-8");
+            response.setContentType("text/xml;charset=windows-1251");
             response.setContentLength(outBytes.length);
 
             try (OutputStream os = response.getOutputStream()) {
