@@ -5,116 +5,127 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+import org.springframework.web.client.RestTemplate;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.OutputStream;
-import java.io.StringReader;
-import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-/**
- * Handles ERIP XML protocol requests from Hutki Grosh system.
- * Supports ServiceInfo (search) and Pay (payment) types.
- */
 @RestController
 @CrossOrigin(origins = "*")
 public class EripXmlController {
 
     private static final Logger log = LoggerFactory.getLogger(EripXmlController.class);
     private static final String ENCODING = "WINDOWS-1251";
+    private static final String JSON_BASE_URL = "http://localhost:10000";
 
-    @PostMapping(value = { "", "/", "/erip", "/api/erip" }, consumes = { "application/x-www-form-urlencoded",
-            "multipart/form-data", "*/*" })
-    public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) {
-        
-        // 1. Собираем заголовки для логов
-        StringBuilder headLog = new StringBuilder("--- XML HEADERS ---\n");
-        java.util.Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String name = headerNames.nextElement();
-            headLog.append(name).append(": ").append(request.getHeader(name)).append("\n");
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @PostMapping(value = { "", "/", "/erip", "/api/erip" })
+    public void handleEripRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String xmlIn = "";
+        try {
+            xmlIn = request.getReader().lines().collect(Collectors.joining());
+            log.info(">>> [BRIDGE] INCOMING XML: {}", xmlIn);
+            DataStore.logXml(xmlIn);
+        } catch (Exception e) {
+            log.error("XML read error: {}", e.getMessage());
         }
 
-        // 2. Получаем XML
-        String xmlIn = request.getParameter("XML");
-        if (xmlIn == null || xmlIn.isEmpty()) {
-            try {
-                xmlIn = request.getReader().lines()
-                        .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
-            } catch (Exception e) {}
-        }
-
-        if (xmlIn != null && !xmlIn.isEmpty()) {
-            DataStore.logXml(new java.util.Date().toString() + "\n" + headLog.toString() + "\n" + xmlIn);
-            log.info(">>> INCOMING XML: {}", xmlIn);
-        }
-
-        // 3. Парсим и готовим ответ
-        Map<String, String> data = parseEripXml(xmlIn != null ? xmlIn : "");
+        Map<String, String> data = parseEripXml(xmlIn);
         String type = data.getOrDefault("RequestType", "ServiceInfo");
         String account = data.getOrDefault("PersonalAccount", "12345678");
-        String serviceNo = data.getOrDefault("ServiceNo", "unknown");
+        String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
 
-        log.info(">>> XML Processing: type={}, account={}, ServiceNo={}", type, account, serviceNo);
-        System.out.println(">>> [XML] " + type + " for account: " + account + ", ServiceNo: " + serviceNo);
-        if (!serviceNo.equals(String.valueOf(DataStore.SERVICE_ID))) {
-            log.warn("Warning: XML ServiceNo {} does not match fixed SERVICE_ID {}", serviceNo, DataStore.SERVICE_ID);
-        }
+        System.out.println(">>> [BRIDGE] Converting " + type + " to JSON for account: " + account);
 
-        String outXml;
-        if ("TransactionStart".equals(type)) {
-            String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<TransactionStart>" +
-                    "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                    "<Info><InfoLine>Operation: " + myTrxId + "</InfoLine></Info>" +
-                    "</TransactionStart>" +
-                    "</ServiceProvider_Response>";
-        } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<TransactionResult>" +
-                    "<Info><InfoLine>Payment successful</InfoLine></Info>" +
-                    "</TransactionResult>" +
-                    "</ServiceProvider_Response>";
-        } else {
-            // ServiceInfo (Поиск)
-            by.hgrosh.mockserver.model.DataStore.Invoice inv = by.hgrosh.mockserver.model.DataStore.invoiceStore.get(account);
-            String echoSurname = (inv != null) ? inv.surname : "Medvedev";
-            String echoFirstName = (inv != null) ? inv.firstName : "Dmitry";
-            String echoAmount = (inv != null) ? inv.getAmountWithComma() : "40,00";
-
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                    "<ServiceProvider_Response>" +
-                    "<ServiceInfo>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"100000\">" +
-                    "<Debt>" + echoAmount + "</Debt><Penalty>0,00</Penalty><PayAmount>" + echoAmount + "</PayAmount>" +
-                    "</Amount>" +
-                    "<Name><Surname>" + echoSurname + "</Surname><FirstName>" + echoFirstName + "</FirstName><Patronymic>Eduardovich</Patronymic></Name>" +
-                    "<Address><City>Minsk</City><Street>Skryganova</Street><House>6</House></Address>" +
-                    "<Info><InfoLine>Account found</InfoLine></Info>" +
-                    "</ServiceInfo>" +
-                    "</ServiceProvider_Response>";
-        }
-
-        // 4. Отправка
+        String outXml = "";
         try {
-            byte[] outBytes = outXml.getBytes(ENCODING);
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentType("text/xml;charset=windows-1251");
-            response.setContentLength(outBytes.length);
-            response.getOutputStream().write(outBytes);
-            response.getOutputStream().flush();
+            if ("ServiceInfo".equals(type)) {
+                // XML -> JSON Step 1 (accountInfo)
+                HutkiGroshJsonController.AccountInfoRequest jsonReq = new HutkiGroshJsonController.AccountInfoRequest();
+                jsonReq.type = "accountInfo";
+                jsonReq.account = account;
+                jsonReq.serviceId = Long.parseLong(serviceNo);
+                jsonReq.sessionId = "SID-" + (System.currentTimeMillis() % 10000);
+
+                HutkiGroshJsonController.AccountInfoResponse jsonRes = restTemplate.postForObject(
+                        JSON_BASE_URL + "/info", jsonReq, HutkiGroshJsonController.AccountInfoResponse.class);
+
+                outXml = buildServiceInfoResponse(jsonRes);
+
+            } else if ("TransactionStart".equals(type)) {
+                // XML -> JSON Step 2 (submitPayment)
+                HutkiGroshJsonController.SubmitPaymentRequest jsonReq = new HutkiGroshJsonController.SubmitPaymentRequest();
+                jsonReq.type = "submitPayment";
+                jsonReq.account = account;
+                jsonReq.serviceId = Long.parseLong(serviceNo);
+                jsonReq.amount = 10.0; // Simplification: in real ERIP we parse amount from XML
+
+                HutkiGroshJsonController.SubmitPaymentResponse jsonRes = restTemplate.postForObject(
+                        JSON_BASE_URL + "/submit", jsonReq, HutkiGroshJsonController.SubmitPaymentResponse.class);
+
+                outXml = buildTransactionStartResponse(jsonRes);
+
+            } else if ("TransactionResult".equals(type)) {
+                // XML -> JSON Step 3 (confirmPayment)
+                HutkiGroshJsonController.ConfirmPaymentRequest jsonReq = new HutkiGroshJsonController.ConfirmPaymentRequest();
+                jsonReq.type = "confirmPayment";
+                jsonReq.account = account;
+                jsonReq.serviceId = Long.parseLong(serviceNo);
+                jsonReq.confirmed = true;
+
+                HutkiGroshJsonController.ConfirmPaymentResponse jsonRes = restTemplate.postForObject(
+                        JSON_BASE_URL + "/commit", jsonReq, HutkiGroshJsonController.ConfirmPaymentResponse.class);
+
+                outXml = buildTransactionResultResponse(jsonRes);
+            }
         } catch (Exception e) {
-            log.error("XML send error: {}", e.getMessage());
+            log.error("Bridge Transformation Error: {}", e.getMessage());
+            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?><Error>Bridge Failure: " + e.getMessage() + "</Error>";
         }
+
+        // Send Response
+        byte[] outBytes = outXml.getBytes(ENCODING);
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType("text/xml;charset=windows-1251");
+        response.setContentLength(outBytes.length);
+        response.getOutputStream().write(outBytes);
+        response.getOutputStream().flush();
+    }
+
+    private String buildServiceInfoResponse(HutkiGroshJsonController.AccountInfoResponse res) {
+        return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
+                "<ServiceInfo>" +
+                "<SessionId>" + res.sessionId + "</SessionId>" +
+                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"10000\">" +
+                "<Debt>" + res.amount + "</Debt></Amount>" +
+                "<Name><Surname>" + res.clientName.surName + "</Surname>" +
+                "<FirstName>" + res.clientName.firstName + "</FirstName></Name>" +
+                "</ServiceInfo></ServiceProvider_Response>";
+    }
+
+    private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res) {
+        return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
+                "<TransactionStart>" +
+                "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
+                "</TransactionStart></ServiceProvider_Response>";
+    }
+
+    private String buildTransactionResultResponse(HutkiGroshJsonController.ConfirmPaymentResponse res) {
+        return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+                "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
+                "<TransactionResult><Status>0</Status></TransactionResult>" +
+                "</ServiceProvider_Response>";
     }
 
     private Map<String, String> parseEripXml(String xml) {
