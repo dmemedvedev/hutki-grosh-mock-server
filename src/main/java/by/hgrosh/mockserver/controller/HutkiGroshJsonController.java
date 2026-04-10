@@ -115,26 +115,32 @@ public class HutkiGroshJsonController {
 
     @PostMapping(value = { "/", "" }, consumes = "application/json")
     public Object dispatchJson(@RequestBody Map<String, Object> body) {
-        String type = (String) body.get("type");
-        log.info(">>> JSON Dispatcher: detected type={}", type);
-        
-        if ("accountInfo".equals(type)) {
-            AccountInfoRequest req = convertMapToObj(body, AccountInfoRequest.class);
-            return accountInfo(req);
-        } else if ("submitPayment".equals(type)) {
-            SubmitPaymentRequest req = convertMapToObj(body, SubmitPaymentRequest.class);
-            return submitPayment(req);
-        } else if ("confirmPayment".equals(type)) {
-            ConfirmPaymentRequest req = convertMapToObj(body, ConfirmPaymentRequest.class);
-            return confirmPayment(req);
+        try {
+            String type = (String) body.get("type");
+            log.info(">>> JSON Dispatcher: detected type={}", type);
+            
+            if ("accountInfo".equals(type)) {
+                AccountInfoRequest req = convertMapToObj(body, AccountInfoRequest.class);
+                return accountInfo(req);
+            } else if ("submitPayment".equals(type)) {
+                SubmitPaymentRequest req = convertMapToObj(body, SubmitPaymentRequest.class);
+                return submitPayment(req);
+            } else if ("confirmPayment".equals(type)) {
+                ConfirmPaymentRequest req = convertMapToObj(body, ConfirmPaymentRequest.class);
+                return confirmPayment(req);
+            }
+            
+            log.warn("Unknown JSON type: {}", type);
+            return Map.of("error", "Unknown type", "type", type != null ? type : "null");
+        } catch (Exception e) {
+            log.error("Dispatch error: {}", e.getMessage());
+            return Map.of("error", e.getMessage(), "status", "500_INTERNAL_ERROR");
         }
-        
-        log.warn("Unknown JSON type: {}", type);
-        return null;
     }
 
     private <T> T convertMapToObj(Map<String, Object> map, Class<T> clazz) {
-        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper.convertValue(map, clazz);
     }
 
