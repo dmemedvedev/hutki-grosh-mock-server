@@ -101,9 +101,13 @@ public class EripXmlController {
         response.getOutputStream().flush();
     }
 
+    private String formatAmount(double amount) {
+        // Гарантируем формат X,XX (две цифры после запятой)
+        return String.format("%.2f", amount).replace(".", ",");
+    }
+
     private String buildServiceInfoResponse(HutkiGroshJsonController.AccountInfoResponse res, String requestId) {
-        String debtStr = String.valueOf(res.amount).replace(".", ",");
-        // FIX: Added Currency="933" for better cabinet compatibility
+        String debtStr = formatAmount(res.amount);
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
                 "<Version>1</Version>" +
@@ -122,6 +126,8 @@ public class EripXmlController {
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId) {
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
+                "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionStart>" +
                 "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
                 "<Info><InfoLine>Оплата принята</InfoLine></Info>" +
@@ -131,6 +137,7 @@ public class EripXmlController {
     private String buildTransactionResultResponse(String requestId) {
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
                 "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionResult><Status>0</Status></TransactionResult>" +
                 "</ServiceProvider_Response>";
