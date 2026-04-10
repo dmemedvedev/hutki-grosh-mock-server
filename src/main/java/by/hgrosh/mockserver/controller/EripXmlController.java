@@ -116,6 +116,7 @@ public class EripXmlController {
             if (reqAmount == null) reqAmount = data.get("PayAmount");
             String echoTrxId = data.get("TransactionId");
             if (echoTrxId == null) echoTrxId = myTrxId;
+            String echoDateTime = data.getOrDefault("DateTime", now);
             
             String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
 
@@ -125,7 +126,7 @@ public class EripXmlController {
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
                     sessionXml +
-                    "<DateTime>" + now + "</DateTime>" +
+                    "<DateTime>" + echoDateTime + "</DateTime>" +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
@@ -139,12 +140,13 @@ public class EripXmlController {
                     "</ServiceProvider_Response>";
 
         } else if ("TransactionResult".equals(type)) {
+            String echoDateTime = data.getOrDefault("DateTime", now);
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
+                    "<DateTime>" + echoDateTime + "</DateTime>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
@@ -155,12 +157,13 @@ public class EripXmlController {
 
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
+            String echoDateTime = data.getOrDefault("DateTime", now);
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
+                    "<DateTime>" + echoDateTime + "</DateTime>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
@@ -215,7 +218,7 @@ public class EripXmlController {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount", "Amount", "TransactionId" };
+            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount", "Amount", "TransactionId", "DateTime", "Currency" };
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
