@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class HutkiGroshJsonController {
 
@@ -113,6 +112,31 @@ public class HutkiGroshJsonController {
     }
 
     // --- ENDPOINTS ---
+
+    @PostMapping(value = { "/", "" }, consumes = "application/json")
+    public Object dispatchJson(@RequestBody Map<String, Object> body) {
+        String type = (String) body.get("type");
+        log.info(">>> JSON Dispatcher: detected type={}", type);
+        
+        if ("accountInfo".equals(type)) {
+            AccountInfoRequest req = convertMapToObj(body, AccountInfoRequest.class);
+            return accountInfo(req);
+        } else if ("submitPayment".equals(type)) {
+            SubmitPaymentRequest req = convertMapToObj(body, SubmitPaymentRequest.class);
+            return submitPayment(req);
+        } else if ("confirmPayment".equals(type)) {
+            ConfirmPaymentRequest req = convertMapToObj(body, ConfirmPaymentRequest.class);
+            return confirmPayment(req);
+        }
+        
+        log.warn("Unknown JSON type: {}", type);
+        return null;
+    }
+
+    private <T> T convertMapToObj(Map<String, Object> map, Class<T> clazz) {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        return mapper.convertValue(map, clazz);
+    }
 
     @PostMapping("/info")
     public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req) {
