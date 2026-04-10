@@ -7,89 +7,97 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @RestController
+@RequestMapping("/api/json")
 @CrossOrigin(origins = "*")
 public class HutkiGroshJsonController {
 
     private static final Logger log = LoggerFactory.getLogger(HutkiGroshJsonController.class);
 
-    // --- DTO CLASSES ---
-
-    public static class ClientName {
-        public String firstName;
-        public String middleName;
-        public String surName;
+    @PostMapping("/info")
+    public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req) {
+        log.info(">>> [JSON] accountInfo request for: {}", req.account);
+        
+        AccountInfoResponse res = new AccountInfoResponse();
+        DataStore.Invoice inv = DataStore.invoiceStore.get(req.account);
+        
+        if (inv != null) {
+            res.responseCode = "allow";
+            res.nextRqType = "TransactionStart";
+            res.amount = inv.getAmountAsDouble();
+            res.editable = true;
+            res.clientName = new ClientName();
+            res.clientName.firstName = inv.firstName;
+            res.clientName.surName = inv.surname;
+            res.ticket.add("Счет найден в системе ПУ");
+            res.ticket.add("Сумма к оплате: " + inv.amount + " BYN");
+        } else {
+            res.responseCode = "deny";
+            res.ticket.add("Ошибка: Лицевой счет не найден в базе ПУ");
+        }
+        
+        return res;
     }
 
-    public static class ClientAddress {
-        public String city;
-        public String street;
-        public String house;
-        public String building;
-        public String apartment;
+    @PostMapping("/submit")
+    public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
+        log.info(">>> [JSON] submitPayment request for: {}, amount: {}", req.account, req.amount);
+        
+        SubmitPaymentResponse res = new SubmitPaymentResponse();
+        res.responseCode = "allow"; // ОБЯЗАТЕЛЬНО для ТХГ
+        res.unipayTrxId = System.currentTimeMillis() / 1000;
+        res.ticket.add("Оплата инициирована");
+        
+        return res;
     }
 
-    public static class Parameter {
-        public int idx;
-        public String name;
-        public String edit;
-        public String value;
-        public String dataType;
-        public String dataFormat;
-        public Integer minLength;
-        public Integer maxLength;
-        public String hint;
+    @PostMapping("/commit")
+    public ConfirmPaymentResponse confirmPayment(@RequestBody ConfirmPaymentRequest req) {
+        log.info(">>> [JSON] confirmPayment request for trx: {}, confirmed: {}", req.unipayTrxId, req.confirmed);
+        
+        ConfirmPaymentResponse res = new ConfirmPaymentResponse();
+        res.responseCode = "allow"; // ОБЯЗАТЕЛЬНО для ТХГ
+        res.ticket.add("Оплата подтверждена");
+        
+        return res;
     }
 
+    // DTO Classes
     public static class AccountInfoRequest {
         public String type;
         public long serviceId;
         public String account;
         public String sessionId;
-        public int raCode;
-        public List<Parameter> parameterList;
     }
 
     public static class AccountInfoResponse {
-        public String nextRqType = "TransactionStart";
-        public List<String> ticket = new ArrayList<>();
-        public String responseCode = "allow";
+        public String responseCode;
+        public String nextRqType;
         public String sessionId;
         public double amount;
-        public boolean editable = true;
-        public double minAmount = 1.0;
-        public double maxAmount = 999999.0;
-        public String editFIO = "deny";
+        public boolean editable;
+        public double minAmount = 0.01;
+        public double maxAmount = 99999.0;
         public ClientName clientName;
-        public String editAddress = "deny";
-        public ClientAddress address;
-        public List<Parameter> parameterList;
+        public List<String> ticket = new ArrayList<>();
+    }
+
+    public static class ClientName {
+        public String firstName;
+        public String surName;
+        public String middleName = "";
     }
 
     public static class SubmitPaymentRequest {
         public String type;
         public long serviceId;
-        public double amount;
-        public int curAmount;
-        public double exRate;
-        public double amountBYR;
-        public long raCode;
-        public long transactionId;
         public String account;
-        public String authType;
-        public String clientFIO;
-        public ClientName clientName;
-        public String clientAddress;
-        public ClientAddress address;
-        public String billId;
-        public String sessionId;
-        public List<Parameter> parameterList;
+        public double amount;
     }
 
     public static class SubmitPaymentResponse {
-        public String responseCode = "allow";
+        public String responseCode;
         public long unipayTrxId;
         public List<String> ticket = new ArrayList<>();
     }
@@ -97,132 +105,14 @@ public class HutkiGroshJsonController {
     public static class ConfirmPaymentRequest {
         public String type;
         public long serviceId;
-        public long billNumber;
-        public long esasTransactionId;
-        public boolean confirmed;
         public long unipayTrxId;
+        public boolean confirmed;
         public String account;
-        public double amount;
         public String errorText;
     }
 
     public static class ConfirmPaymentResponse {
-        public String responseCode = "allow";
+        public String responseCode;
         public List<String> ticket = new ArrayList<>();
-    }
-
-    // --- ENDPOINTS ---
-
-    @PostMapping(value = { "/", "" }, consumes = "application/json")
-    public Object dispatchJson(@RequestBody Map<String, Object> body) {
-        try {
-            String type = (String) body.get("type");
-            log.info(">>> JSON Dispatcher: detected type={}", type);
-            
-            if ("accountInfo".equals(type)) {
-                AccountInfoRequest req = convertMapToObj(body, AccountInfoRequest.class);
-                return accountInfo(req);
-            } else if ("submitPayment".equals(type)) {
-                SubmitPaymentRequest req = convertMapToObj(body, SubmitPaymentRequest.class);
-                return submitPayment(req);
-            } else if ("confirmPayment".equals(type)) {
-                ConfirmPaymentRequest req = convertMapToObj(body, ConfirmPaymentRequest.class);
-                return confirmPayment(req);
-            }
-            
-            log.warn("Unknown JSON type: {}", type);
-            return Map.of("error", "Unknown type", "type", type != null ? type : "null");
-        } catch (Exception e) {
-            log.error("Dispatch error: {}", e.getMessage());
-            return Map.of("error", e.getMessage(), "status", "500_INTERNAL_ERROR");
-        }
-    }
-
-    private <T> T convertMapToObj(Map<String, Object> map, Class<T> clazz) {
-        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper()
-            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper.convertValue(map, clazz);
-    }
-
-    @PostMapping("/info")
-    public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req) {
-        System.out.println(">>> [JSON] accountInfo for account: " + req.account);
-        log.info(">>> JSON accountInfo: serviceId={}, account={}", req.serviceId, req.account);
-        if (req.serviceId != DataStore.SERVICE_ID) {
-            log.warn("Warning: Received serviceId {} does not match fixed SERVICE_ID {}", req.serviceId, DataStore.SERVICE_ID);
-        }
-        DataStore.logJson("Request: accountInfo, serviceId=" + req.serviceId + ", account=" + req.account);
-
-        AccountInfoResponse res = new AccountInfoResponse();
-        res.sessionId = req.sessionId;
-
-        DataStore.Invoice inv = DataStore.invoiceStore.get(req.account);
-        if (inv != null) {
-            res.amount = inv.getAmountAsDouble();
-            res.clientName = new ClientName();
-            res.clientName.firstName = inv.firstName;
-            res.clientName.surName = inv.surname;
-            res.clientName.middleName = "Eduardovich";
-        } else {
-            res.amount = 40.0;
-            res.clientName = new ClientName();
-            res.clientName.firstName = "Dmitry";
-            res.clientName.surName = "Medvedev";
-            res.clientName.middleName = "Eduardovich";
-        }
-
-        res.ticket.add("Account found: " + req.account);
-        res.ticket.add("Current debt: " + res.amount + " BYN");
-
-        return res;
-    }
-
-    @PostMapping("/submit")
-    public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
-        System.out.println(">>> [JSON] submitPayment for account: " + req.account + ", amount: " + req.amount);
-        log.info(">>> JSON submitPayment: serviceId={}, account={}, amount={}", req.serviceId, req.account, req.amount);
-        
-        DataStore.Invoice inv = DataStore.invoiceStore.get(req.account);
-        if (inv != null) {
-            inv.status = "OutPayer"; // Ожидает оплаты (состояние в ТХГ)
-            log.info(">>> [STATUS] Invoice {} state changed to OutPayer", req.account);
-        }
-
-        DataStore.logJson("Request: submitPayment, serviceId=" + req.serviceId + ", account=" + req.account + ", amount=" + req.amount);
-
-        SubmitPaymentResponse res = new SubmitPaymentResponse();
-        res.unipayTrxId = System.currentTimeMillis() / 1000;
-        res.ticket.add("Payment successfully initiated.");
-        res.ticket.add("Transaction ID: " + res.unipayTrxId);
-
-        return res;
-    }
-
-    @PostMapping("/commit")
-    public ConfirmPaymentResponse confirmPayment(@RequestBody ConfirmPaymentRequest req) {
-        System.out.println(">>> [JSON] confirmPayment for trx: " + req.unipayTrxId + ", confirmed: " + req.confirmed);
-        log.info(">>> JSON confirmPayment: serviceId={}, trxId={}, confirmed={}", req.serviceId, req.unipayTrxId, req.confirmed);
-
-        if (req.confirmed) {
-            DataStore.Invoice inv = DataStore.invoiceStore.get(req.account != null ? req.account : "");
-            if (inv != null) {
-                inv.status = "Applied"; // Оплачен
-                log.info(">>> [STATUS] Invoice {} state changed to Applied", req.account);
-            }
-        }
-
-        DataStore.logJson("Request: confirmPayment, serviceId=" + req.serviceId + ", confirmed=" + req.confirmed);
-
-        ConfirmPaymentResponse res = new ConfirmPaymentResponse();
-        if (req.confirmed) {
-            res.ticket.add("Payment successfully completed.");
-            res.ticket.add("Thank you!");
-        } else {
-            res.responseCode = "deny";
-            res.ticket.add("Payment cancelled or failed.");
-            res.ticket.add("Reason: " + req.errorText);
-        }
-
-        return res;
     }
 }

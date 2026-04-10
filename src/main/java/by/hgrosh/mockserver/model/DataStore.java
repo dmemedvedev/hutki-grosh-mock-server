@@ -11,13 +11,31 @@ public class DataStore {
     public static final List<String> xmlLogs = java.util.Collections.synchronizedList(new ArrayList<>());
     public static final List<String> jsonLogs = java.util.Collections.synchronizedList(new ArrayList<>());
     public static final Map<String, Invoice> invoiceStore = new ConcurrentHashMap<>();
+    public static final List<Operation> publicOperations = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+    public static class Operation {
+        public String account;
+        public String type;
+        public double amount;
+        public java.time.LocalDateTime timestamp;
+        public boolean isVisible;
+
+        public Operation(String account, String type, double amount, boolean isVisible) {
+            this.account = account;
+            this.type = type;
+            this.amount = amount;
+            this.isVisible = isVisible;
+            this.timestamp = java.time.LocalDateTime.now();
+        }
+    }
 
     public static class Invoice {
         public String account;
-        public String amount; // С запятой для XML, с точкой для JSON (будем нормализовать)
+        public String amount;
         public String surname;
         public String firstName;
-        public String status = "Pending"; // Pending, OutPayer, Applied
+        public String status = "Pending";
+        public List<Operation> history = new java.util.ArrayList<>();
 
         public Invoice(String account, String amount, String surname, String firstName) {
             this.account = account;
@@ -25,8 +43,8 @@ public class DataStore {
             this.surname = surname;
             this.firstName = firstName;
         }
-
-        public double getAmountAsDouble() {
+        
+        // ... rest of methods
             try {
                 return Double.parseDouble(this.amount.replace(",", "."));
             } catch (Exception e) {

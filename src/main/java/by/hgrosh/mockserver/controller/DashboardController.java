@@ -17,6 +17,7 @@ public class DashboardController {
     @GetMapping("/")
     public String dashboard(Model model) {
         model.addAttribute("logs", billingService.getLogs());
+        model.addAttribute("invoices", by.hgrosh.mockserver.model.DataStore.invoiceStore.values());
         return "dashboard";
     }
 }

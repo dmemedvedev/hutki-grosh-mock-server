@@ -147,4 +147,9 @@ public class MockBillingService {
     public List<LogEntry> getLogs() {
         return logs;
     }
+
+    public void addLog(LogEntry entry) {
+        logs.add(0, entry);
+        if (logs.size() > 100) logs.remove(logs.size() - 1);
+    }
 }
