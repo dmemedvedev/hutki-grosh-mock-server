@@ -181,6 +181,13 @@ public class HutkiGroshJsonController {
     public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
         System.out.println(">>> [JSON] submitPayment for account: " + req.account + ", amount: " + req.amount);
         log.info(">>> JSON submitPayment: serviceId={}, account={}, amount={}", req.serviceId, req.account, req.amount);
+        
+        DataStore.Invoice inv = DataStore.invoiceStore.get(req.account);
+        if (inv != null) {
+            inv.status = "OutPayer"; // Ожидает оплаты (состояние в ТХГ)
+            log.info(">>> [STATUS] Invoice {} state changed to OutPayer", req.account);
+        }
+
         DataStore.logJson("Request: submitPayment, serviceId=" + req.serviceId + ", account=" + req.account + ", amount=" + req.amount);
 
         SubmitPaymentResponse res = new SubmitPaymentResponse();
@@ -195,6 +202,15 @@ public class HutkiGroshJsonController {
     public ConfirmPaymentResponse confirmPayment(@RequestBody ConfirmPaymentRequest req) {
         System.out.println(">>> [JSON] confirmPayment for trx: " + req.unipayTrxId + ", confirmed: " + req.confirmed);
         log.info(">>> JSON confirmPayment: serviceId={}, trxId={}, confirmed={}", req.serviceId, req.unipayTrxId, req.confirmed);
+
+        if (req.confirmed) {
+            DataStore.Invoice inv = DataStore.invoiceStore.get(req.account != null ? req.account : "");
+            if (inv != null) {
+                inv.status = "Applied"; // Оплачен
+                log.info(">>> [STATUS] Invoice {} state changed to Applied", req.account);
+            }
+        }
+
         DataStore.logJson("Request: confirmPayment, serviceId=" + req.serviceId + ", confirmed=" + req.confirmed);
 
         ConfirmPaymentResponse res = new ConfirmPaymentResponse();

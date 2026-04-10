@@ -17,6 +17,7 @@ public class DataStore {
         public String amount; // С запятой для XML, с точкой для JSON (будем нормализовать)
         public String surname;
         public String firstName;
+        public String status = "Pending"; // Pending, OutPayer, Applied
 
         public Invoice(String account, String amount, String surname, String firstName) {
             this.account = account;

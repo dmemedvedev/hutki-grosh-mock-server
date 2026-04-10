@@ -39,7 +39,6 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
         String requestId = data.getOrDefault("RequestId", "1");
         
-        // Достаем РЕАЛЬНУЮ сумму
         double amount = 0.0;
         try {
             String rawAmount = data.get("Amount");
@@ -69,7 +68,7 @@ public class EripXmlController {
                 jsonReq.type = "submitPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
-                jsonReq.amount = (amount > 0) ? amount : 10.0; // Используем реальную сумму!
+                jsonReq.amount = (amount > 0) ? amount : 10.0;
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
                 outXml = buildTransactionStartResponse(jsonRes, requestId);
@@ -80,6 +79,10 @@ public class EripXmlController {
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
                 jsonReq.confirmed = true;
+                
+                // Извлекаем ID транзакции из XML
+                String trxIdStr = data.getOrDefault("ServiceProvider_TrxId", "0");
+                jsonReq.unipayTrxId = Long.parseLong(trxIdStr);
 
                 jsonController.confirmPayment(jsonReq);
                 outXml = buildTransactionResultResponse(requestId);
@@ -115,7 +118,6 @@ public class EripXmlController {
     }
 
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId) {
-        // Возвращаем структуру, которая ТОЧНО работала раньше
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
                 "<TransactionStart>" +
@@ -139,7 +141,8 @@ public class EripXmlController {
             org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
             
-            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount" };
+            // Добавил ServiceProvider_TrxId в список тегов для парсинга
+            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
