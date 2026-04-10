@@ -62,6 +62,7 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", "unknown");
 
         log.info(">>> XML Processing: type={}, account={}, ServiceNo={}", type, account, serviceNo);
+        System.out.println(">>> [XML] " + type + " for account: " + account + ", ServiceNo: " + serviceNo);
         if (!serviceNo.equals(String.valueOf(DataStore.SERVICE_ID))) {
             log.warn("Warning: XML ServiceNo {} does not match fixed SERVICE_ID {}", serviceNo, DataStore.SERVICE_ID);
         }

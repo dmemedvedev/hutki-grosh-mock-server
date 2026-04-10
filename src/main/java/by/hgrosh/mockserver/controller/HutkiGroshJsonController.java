@@ -146,6 +146,7 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/info")
     public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req) {
+        System.out.println(">>> [JSON] accountInfo for account: " + req.account);
         log.info(">>> JSON accountInfo: serviceId={}, account={}", req.serviceId, req.account);
         if (req.serviceId != DataStore.SERVICE_ID) {
             log.warn("Warning: Received serviceId {} does not match fixed SERVICE_ID {}", req.serviceId, DataStore.SERVICE_ID);
@@ -178,6 +179,7 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/submit")
     public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
+        System.out.println(">>> [JSON] submitPayment for account: " + req.account + ", amount: " + req.amount);
         log.info(">>> JSON submitPayment: serviceId={}, account={}, amount={}", req.serviceId, req.account, req.amount);
         DataStore.logJson("Request: submitPayment, serviceId=" + req.serviceId + ", account=" + req.account + ", amount=" + req.amount);
 
@@ -191,6 +193,7 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/commit")
     public ConfirmPaymentResponse confirmPayment(@RequestBody ConfirmPaymentRequest req) {
+        System.out.println(">>> [JSON] confirmPayment for trx: " + req.unipayTrxId + ", confirmed: " + req.confirmed);
         log.info(">>> JSON confirmPayment: serviceId={}, trxId={}, confirmed={}", req.serviceId, req.unipayTrxId, req.confirmed);
         DataStore.logJson("Request: confirmPayment, serviceId=" + req.serviceId + ", confirmed=" + req.confirmed);
 
