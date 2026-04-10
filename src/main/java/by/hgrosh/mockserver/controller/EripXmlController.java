@@ -51,13 +51,14 @@ public class EripXmlController {
         return xmlLogs;
     }
 
-    @GetMapping("/register-invoice")
+    @GetMapping(value = { "/register-invoice", "/api/register-invoice", "/erip/register-invoice" })
     public String registerInvoice(
             @RequestParam String account,
             @RequestParam String amount,
             @RequestParam(defaultValue = "Medvedev") String surname,
             @RequestParam(defaultValue = "Dmitry") String firstName) {
         
+        log.info("!!! REGISTERING INVOICE: account={}, amount={}, name={} {}", account, amount, firstName, surname);
         // Нормализуем сумму (запятая)
         String normAmount = amount.replace(".", ",");
         if (!normAmount.contains(",")) normAmount += ",00";
