@@ -15,6 +15,7 @@ import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handles ERIP XML protocol requests from Hutki Grosh system.
@@ -28,9 +29,41 @@ public class EripXmlController {
     public static final List<String> xmlLogs = new ArrayList<>();
     private static final String ENCODING = "WINDOWS-1251";
 
+    // Хранилище счетов в памяти
+    private static final Map<String, Invoice> invoiceStore = new ConcurrentHashMap<>();
+
+    static class Invoice {
+        String account;
+        String amount;
+        String surname;
+        String firstName;
+
+        Invoice(String account, String amount, String surname, String firstName) {
+            this.account = account;
+            this.amount = amount;
+            this.surname = surname;
+            this.firstName = firstName;
+        }
+    }
+
     @GetMapping("/logs-xml")
     public List<String> getXmlLogs() {
         return xmlLogs;
+    }
+
+    @GetMapping("/register-invoice")
+    public String registerInvoice(
+            @RequestParam String account,
+            @RequestParam String amount,
+            @RequestParam(defaultValue = "Medvedev") String surname,
+            @RequestParam(defaultValue = "Dmitry") String firstName) {
+        
+        // Нормализуем сумму (запятая)
+        String normAmount = amount.replace(".", ",");
+        if (!normAmount.contains(",")) normAmount += ",00";
+        
+        invoiceStore.put(account, new Invoice(account, normAmount, surname, firstName));
+        return "OK: Invoice " + account + " registered for " + normAmount + " BYN";
     }
 
     @PostMapping(value = { "", "/", "/erip", "/api", "/api/erip" }, consumes = { "application/x-www-form-urlencoded",
@@ -120,17 +153,22 @@ public class EripXmlController {
 
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
+            Invoice inv = invoiceStore.get(account);
+            String echoSurname = (inv != null) ? inv.surname : "Medvedev";
+            String echoFirstName = (inv != null) ? inv.firstName : "Dmitry";
+            String echoAmount = (inv != null) ? inv.amount : "40,00";
+
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<ServiceInfo>" +
                     "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"100000\">" +
-                    "<Debt>40,00</Debt>" +
+                    "<Debt>" + echoAmount + "</Debt>" +
                     "<Penalty>0,00</Penalty>" +
-                    "<PayAmount>40,00</PayAmount>" +
+                    "<PayAmount>" + echoAmount + "</PayAmount>" +
                     "</Amount>" +
                     "<Name>" +
-                    "<Surname>Medvedev</Surname>" +
-                    "<FirstName>Dmitry</FirstName>" +
+                    "<Surname>" + echoSurname + "</Surname>" +
+                    "<FirstName>" + echoFirstName + "</FirstName>" +
                     "<Patronymic>Eduardovich</Patronymic>" +
                     "</Name>" +
                     "<Address><City>Minsk</City><Street>Skryganova</Street><House>6</House></Address>" +
