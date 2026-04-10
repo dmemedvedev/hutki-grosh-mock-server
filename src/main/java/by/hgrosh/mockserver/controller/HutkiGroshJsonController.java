@@ -21,7 +21,7 @@ public class HutkiGroshJsonController {
     private void logJson(String title, Object obj) {
         try {
             String json = mapper.writeValueAsString(obj);
-            System.out.println(">>> [JSON-DEBUG] " + title + ":\n" + json);
+            log.info(">>> [JSON-DEBUG] {}:\n{}", title, json);
         } catch (Exception e) {
             log.error("Failed to log JSON: {}", e.getMessage());
         }
