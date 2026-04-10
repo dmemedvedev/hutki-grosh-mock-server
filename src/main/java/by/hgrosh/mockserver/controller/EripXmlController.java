@@ -117,16 +117,18 @@ public class EripXmlController {
             String echoTrxId = data.get("TransactionId");
             if (echoTrxId == null) echoTrxId = myTrxId;
             String echoDateTime = data.getOrDefault("DateTime", now);
+            String echoAuthType = data.getOrDefault("AuthorizationType", "999");
             
-            String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
+            String amountValue = (reqAmount != null && !reqAmount.isEmpty()) ? reqAmount : "40.00";
+            if (!amountValue.contains(".")) amountValue += ".00";
 
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
-                    sessionXml +
                     "<DateTime>" + echoDateTime + "</DateTime>" +
+                    sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
@@ -135,7 +137,8 @@ public class EripXmlController {
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
                     "<TransactionId>" + echoTrxId + "</TransactionId>" +
-                    amountXml +
+                    "<Amount>" + amountValue + "</Amount>" +
+                    "<AuthorizationType>" + echoAuthType + "</AuthorizationType>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
 
@@ -218,7 +221,7 @@ public class EripXmlController {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount", "Amount", "TransactionId", "DateTime", "Currency" };
+            String[] tags = { "RequestType", "PersonalAccount", "RequestId", "ServiceNo", "Agent", "SessionId", "PayAmount", "Amount", "TransactionId", "DateTime", "Currency", "AuthorizationType" };
             for (String tag : tags) {
                 NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
