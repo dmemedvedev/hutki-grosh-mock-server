@@ -140,8 +140,11 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/info")
     public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req) {
-        log.info(">>> JSON accountInfo: account={}", req.account);
-        DataStore.logJson("Request: accountInfo, account=" + req.account);
+        log.info(">>> JSON accountInfo: serviceId={}, account={}", req.serviceId, req.account);
+        if (req.serviceId != DataStore.SERVICE_ID) {
+            log.warn("Warning: Received serviceId {} does not match fixed SERVICE_ID {}", req.serviceId, DataStore.SERVICE_ID);
+        }
+        DataStore.logJson("Request: accountInfo, serviceId=" + req.serviceId + ", account=" + req.account);
 
         AccountInfoResponse res = new AccountInfoResponse();
         res.sessionId = req.sessionId;
@@ -169,8 +172,8 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/submit")
     public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
-        log.info(">>> JSON submitPayment: account={}, amount={}", req.account, req.amount);
-        DataStore.logJson("Request: submitPayment, account=" + req.account + ", amount=" + req.amount);
+        log.info(">>> JSON submitPayment: serviceId={}, account={}, amount={}", req.serviceId, req.account, req.amount);
+        DataStore.logJson("Request: submitPayment, serviceId=" + req.serviceId + ", account=" + req.account + ", amount=" + req.amount);
 
         SubmitPaymentResponse res = new SubmitPaymentResponse();
         res.unipayTrxId = System.currentTimeMillis() / 1000;
@@ -182,8 +185,8 @@ public class HutkiGroshJsonController {
 
     @PostMapping("/commit")
     public ConfirmPaymentResponse confirmPayment(@RequestBody ConfirmPaymentRequest req) {
-        log.info(">>> JSON confirmPayment: trxId={}, confirmed={}", req.unipayTrxId, req.confirmed);
-        DataStore.logJson("Request: confirmPayment, confirmed=" + req.confirmed);
+        log.info(">>> JSON confirmPayment: serviceId={}, trxId={}, confirmed={}", req.serviceId, req.unipayTrxId, req.confirmed);
+        DataStore.logJson("Request: confirmPayment, serviceId=" + req.serviceId + ", confirmed=" + req.confirmed);
 
         ConfirmPaymentResponse res = new ConfirmPaymentResponse();
         if (req.confirmed) {

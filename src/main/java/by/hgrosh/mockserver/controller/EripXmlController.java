@@ -59,6 +59,12 @@ public class EripXmlController {
         Map<String, String> data = parseEripXml(xmlIn != null ? xmlIn : "");
         String type = data.getOrDefault("RequestType", "ServiceInfo");
         String account = data.getOrDefault("PersonalAccount", "12345678");
+        String serviceNo = data.getOrDefault("ServiceNo", "unknown");
+
+        log.info(">>> XML Processing: type={}, account={}, ServiceNo={}", type, account, serviceNo);
+        if (!serviceNo.equals(String.valueOf(DataStore.SERVICE_ID))) {
+            log.warn("Warning: XML ServiceNo {} does not match fixed SERVICE_ID {}", serviceNo, DataStore.SERVICE_ID);
+        }
 
         String outXml;
         if ("TransactionStart".equals(type)) {
@@ -115,7 +121,7 @@ public class EripXmlController {
         try {
             javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(xml)));
-            String[] tags = { "RequestType", "PersonalAccount" };
+            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) map.put(tag, nodes.item(0).getTextContent().trim());

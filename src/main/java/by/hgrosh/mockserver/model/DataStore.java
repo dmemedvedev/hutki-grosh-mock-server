@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DataStore {
 
+    public static final long SERVICE_ID = 13381001L;
     public static final List<String> xmlLogs = new ArrayList<>();
     public static final List<String> jsonLogs = new ArrayList<>();
     public static final Map<String, Invoice> invoiceStore = new ConcurrentHashMap<>();
