@@ -82,104 +82,52 @@ public class EripXmlController {
         sdf.setTimeZone(TimeZone.getTimeZone("Europe/Minsk"));
         String now = sdf.format(new Date());
 
-        // 4. Формируем ответ на основе RequestType
+        // 4. Формируем ответ на основе RequestType (Строго КУИС)
         String outXml;
 
         if ("Pay".equals(type)) {
-            // ФИНАЛЬНЫЙ ШАГ ОПЛАТЫ
-            String paymentNo = "PAY-" + (System.currentTimeMillis() / 1000);
+            String paymentNo = String.valueOf(System.currentTimeMillis() / 1000);
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<RequestType>Pay</RequestType>" +
-                    "<ResponseType>Pay</ResponseType>" +
+                    "<Pay>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<PaymentNo>" + paymentNo + "</PaymentNo>" + // Обязательно для Pay
+                    "<PaymentNo>" + paymentNo + "</PaymentNo>" +
                     "<Amount>40,00</Amount>" +
                     "<Ticket>" +
-                    "<Line>Оплата принята успешно</Line>" +
-                    "<Line>Номер чека: " + paymentNo + "</Line>" +
+                    "<Line>Payment successful</Line>" +
+                    "<Line>Check No: " + paymentNo + "</Line>" +
                     "</Ticket>" +
+                    "</Pay>" +
                     "</ServiceProvider_Response>";
 
         } else if ("TransactionStart".equals(type)) {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
-            String reqAmount = data.get("Amount");
-            if (reqAmount == null) reqAmount = data.get("PayAmount");
-            String echoTrxId = data.get("TransactionId");
-            if (echoTrxId == null) echoTrxId = myTrxId;
-            String echoDateTime = data.getOrDefault("DateTime", now);
-            String echoAuthType = data.getOrDefault("AuthorizationType", "999");
-            String echoAgent = data.getOrDefault("Agent", "999");
-            
-            String amountValue = (reqAmount != null && !reqAmount.isEmpty()) ? reqAmount : "40.00";
-
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + echoDateTime + "</DateTime>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Currency>933</Currency>" +
-                    "<RequestType>TransactionStart</RequestType>" +
-                    "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
-                    "<TransactionId>" + echoTrxId + "</TransactionId>" +
-                    "<Amount>" + amountValue + "</Amount>" +
-                    "<Agent>" + echoAgent + "</Agent>" +
-                    "<AuthorizationType>" + echoAuthType + "</AuthorizationType>" +
+                    "<Info><InfoLine>Operation No: " + myTrxId + "</InfoLine></Info>" +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
 
         } else if ("TransactionResult".equals(type)) {
-            String echoDateTime = data.getOrDefault("DateTime", now);
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + echoDateTime + "</DateTime>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Currency>933</Currency>" +
-                    "<RequestType>TransactionResult</RequestType>" +
-                    "<ResponseType>TransactionResult</ResponseType>" +
+                    "<TransactionResult>" +
+                    "<Info><InfoLine>Payment completed successfully</InfoLine></Info>" +
+                    "</TransactionResult>" +
                     "</ServiceProvider_Response>";
 
         } else {
             // DEFAULT: ServiceInfo (Поиск счета)
-            String echoDateTime = data.getOrDefault("DateTime", now);
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
-                    "<Version>1</Version>" +
-                    "<RequestId>" + requestId + "</RequestId>" +
-                    "<Status>0</Status>" +
-                    "<DateTime>" + echoDateTime + "</DateTime>" +
-                    sessionXml +
-                    "<ServiceNo>" + serviceNo + "</ServiceNo>" +
-                    "<PersonalAccount>" + account + "</PersonalAccount>" +
-                    "<Currency>933</Currency>" +
-                    "<RequestType>ServiceInfo</RequestType>" +
-                    "<ResponseType>ServiceInfo</ResponseType>" +
                     "<ServiceInfo>" +
-                    "<Agent>999</Agent>" +
-                    "<Amount Editable=\"Y\" MinAmount=\"0.01\" MaxAmount=\"999999.99\">" +
-                    "<Debt>40.00</Debt>" +
-                    "<Penalty>0.00</Penalty>" +
-                    "<PayAmount>40.00</PayAmount>" +
+                    "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"100000\">" +
+                    "<Debt>40,00</Debt>" +
+                    "<Penalty>0,00</Penalty>" +
+                    "<PayAmount>40,00</PayAmount>" +
                     "</Amount>" +
-                    "<PayerNo>" + account + "</PayerNo>" +
-                    "<View></View>" +
                     "<Name>" +
                     "<Surname>Medvedev</Surname>" +
                     "<FirstName>Dmitry</FirstName>" +
