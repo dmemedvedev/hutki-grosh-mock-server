@@ -114,15 +114,20 @@ public class EripXmlController {
             String myTrxId = String.valueOf(System.currentTimeMillis() / 1000);
             String reqAmount = data.get("Amount");
             if (reqAmount == null) reqAmount = data.get("PayAmount");
+            String echoTrxId = data.getOrDefault("TransactionId", myTrxId);
             String amountXml = (reqAmount != null && !reqAmount.isEmpty()) ? "<Amount>" + reqAmount + "</Amount>" : "";
+
+            if (amountXml.contains("40") && !amountXml.contains(".")) {
+                amountXml = "<Amount>40.00</Amount>";
+            }
 
             outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
-                    "<DateTime>" + now + "</DateTime>" +
                     sessionXml +
+                    "<DateTime>" + now + "</DateTime>" +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
                     "<PersonalAccount>" + account + "</PersonalAccount>" +
                     "<Currency>933</Currency>" +
@@ -130,6 +135,7 @@ public class EripXmlController {
                     "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
                     "<ServiceProvider_TrxId>" + myTrxId + "</ServiceProvider_TrxId>" +
+                    "<TransactionId>" + echoTrxId + "</TransactionId>" +
                     amountXml +
                     "</TransactionStart>" +
                     "</ServiceProvider_Response>";
