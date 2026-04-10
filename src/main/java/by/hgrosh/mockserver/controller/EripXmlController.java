@@ -80,7 +80,6 @@ public class EripXmlController {
                 jsonReq.serviceId = Long.parseLong(serviceNo);
                 jsonReq.confirmed = true;
                 
-                // Извлекаем ID транзакции из XML
                 String trxIdStr = data.getOrDefault("ServiceProvider_TrxId", "0");
                 jsonReq.unipayTrxId = Long.parseLong(trxIdStr);
 
@@ -92,6 +91,8 @@ public class EripXmlController {
             outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\"?><ServiceProvider_Response><Error>" + e.getMessage() + "</Error></ServiceProvider_Response>";
         }
 
+        log.info(">>> [BRIDGE] RESPONSE XML:\n{}", outXml);
+
         byte[] outBytes = outXml.getBytes(ENCODING);
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("text/xml;charset=windows-1251");
@@ -102,13 +103,14 @@ public class EripXmlController {
 
     private String buildServiceInfoResponse(HutkiGroshJsonController.AccountInfoResponse res, String requestId) {
         String debtStr = String.valueOf(res.amount).replace(".", ",");
+        // FIX: Added Currency="933" for better cabinet compatibility
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
                 "<Version>1</Version>" +
                 "<RequestId>" + requestId + "</RequestId>" +
                 "<ServiceInfo>" +
                 "<SessionId>" + res.sessionId + "</SessionId>" +
-                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"10000\">" +
+                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"10000\" Currency=\"933\">" +
                 "<Debt>" + debtStr + "</Debt><Penalty>0,00</Penalty><PayAmount>" + debtStr + "</PayAmount>" +
                 "</Amount>" +
                 "<Name><Surname>" + res.clientName.surName + "</Surname>" +
@@ -141,7 +143,6 @@ public class EripXmlController {
             org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
             
-            // Добавил ServiceProvider_TrxId в список тегов для парсинга
             String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);

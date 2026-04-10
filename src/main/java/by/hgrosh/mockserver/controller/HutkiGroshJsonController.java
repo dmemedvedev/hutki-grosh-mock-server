@@ -37,6 +37,7 @@ public class HutkiGroshJsonController {
         if (inv != null) {
             res.responseCode = "allow";
             res.nextRqType = "TransactionStart";
+            res.sessionId = req.sessionId; // Echo back the session ID
             res.amount = inv.getAmountAsDouble();
             res.editable = true;
             res.clientName = new ClientName();
