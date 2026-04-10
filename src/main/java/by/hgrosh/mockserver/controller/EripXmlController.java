@@ -39,6 +39,17 @@ public class EripXmlController {
         String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
         String requestId = data.getOrDefault("RequestId", "1");
         
+        // Достаем РЕАЛЬНУЮ сумму
+        double amount = 0.0;
+        try {
+            String rawAmount = data.get("Amount");
+            if (rawAmount != null) {
+                amount = Double.parseDouble(rawAmount.replace(",", "."));
+            }
+        } catch (Exception e) {
+            log.warn(">>> [BRIDGE] Amount parse failed for: {}", data.get("Amount"));
+        }
+
         System.out.println(">>> [BRIDGE] Converting " + type + " for account: " + account);
 
         String outXml = "";
@@ -50,7 +61,6 @@ public class EripXmlController {
                 jsonReq.serviceId = Long.parseLong(serviceNo);
                 jsonReq.sessionId = "SID-" + (System.currentTimeMillis() % 10000);
 
-                // Прямой вызов метода вместо HTTP
                 HutkiGroshJsonController.AccountInfoResponse jsonRes = jsonController.accountInfo(jsonReq);
                 outXml = buildServiceInfoResponse(jsonRes, requestId);
 
@@ -59,7 +69,7 @@ public class EripXmlController {
                 jsonReq.type = "submitPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
-                jsonReq.amount = 10.0; // stub
+                jsonReq.amount = (amount > 0) ? amount : 10.0; // Используем реальную сумму!
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
                 outXml = buildTransactionStartResponse(jsonRes, requestId);
@@ -105,19 +115,18 @@ public class EripXmlController {
     }
 
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId) {
+        // Возвращаем структуру, которая ТОЧНО работала раньше
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionStart>" +
                 "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
+                "<Info><InfoLine>Оплата принята</InfoLine></Info>" +
                 "</TransactionStart></ServiceProvider_Response>";
     }
 
     private String buildTransactionResultResponse(String requestId) {
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
                 "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionResult><Status>0</Status></TransactionResult>" +
                 "</ServiceProvider_Response>";
@@ -127,11 +136,15 @@ public class EripXmlController {
         Map<String, String> map = new HashMap<>();
         try {
             javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
-            org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(xml)));
+            org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
+            org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
+            
             String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);
-                if (nodes.getLength() > 0) map.put(tag, nodes.item(0).getTextContent().trim());
+                if (nodes.getLength() > 0) {
+                    map.put(tag, nodes.item(0).getTextContent().trim());
+                }
             }
         } catch (Exception e) {}
         return map;
