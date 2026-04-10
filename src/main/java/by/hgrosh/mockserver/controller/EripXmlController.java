@@ -121,8 +121,11 @@ public class EripXmlController {
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
+                    "<DateTime>" + now + "</DateTime>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<PersonalAccount>" + account + "</PersonalAccount>" +
+                    "<Currency>933</Currency>" +
                     "<RequestType>TransactionStart</RequestType>" +
                     "<ResponseType>TransactionStart</ResponseType>" +
                     "<TransactionStart>" +
@@ -132,14 +135,18 @@ public class EripXmlController {
                     "</ServiceProvider_Response>";
 
         } else if ("TransactionResult".equals(type)) {
-            outXml = "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
+            outXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<ServiceProvider_Response>" +
                     "<Version>1</Version>" +
                     "<RequestId>" + requestId + "</RequestId>" +
                     "<Status>0</Status>" +
+                    "<DateTime>" + now + "</DateTime>" +
                     sessionXml +
                     "<ServiceNo>" + serviceNo + "</ServiceNo>" +
+                    "<PersonalAccount>" + account + "</PersonalAccount>" +
+                    "<Currency>933</Currency>" +
                     "<RequestType>TransactionResult</RequestType>" +
+                    "<ResponseType>TransactionResult</ResponseType>" +
                     "</ServiceProvider_Response>";
 
         } else {
