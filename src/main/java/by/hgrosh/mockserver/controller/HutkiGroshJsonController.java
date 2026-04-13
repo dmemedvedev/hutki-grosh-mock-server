@@ -49,8 +49,10 @@ public class HutkiGroshJsonController {
         public String nextRqType = "TransactionStart"; // Default
         public String account;
         public double amount;
+        public double penalty = 0.0;
         public String sessionId;
         public ClientName clientName;
+        public Address address;
         public List<DataStore.Parameter> parameterList;
         public String message;
     }
@@ -58,6 +60,12 @@ public class HutkiGroshJsonController {
     public static class ClientName {
         public String firstName;
         public String surName;
+    }
+
+    public static class Address {
+        public String city = "Minsk";
+        public String street = "";
+        public String house = "";
     }
 
     public static class SubmitPaymentResponse {
@@ -125,6 +133,8 @@ public class HutkiGroshJsonController {
         res.clientName = new ClientName();
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
+        res.address = new Address();
+        res.address.city = "Minsk";
 
         return res;
     }
