@@ -23,10 +23,25 @@ public class EripXmlController {
     @Autowired
     private HutkiGroshJsonController jsonController;
 
+    // Help the user register invoices via URL for testing
+    @RequestMapping(value = "/register-invoice", method = { RequestMethod.GET, RequestMethod.POST })
+    public String registerInvoice(
+            @RequestParam(value = "account") String account,
+            @RequestParam(value = "amount") String amount,
+            @RequestParam(value = "surname", defaultValue = "Testov") String surname,
+            @RequestParam(value = "firstName", defaultValue = "Test") String firstName) {
+        
+        DataStore.Invoice inv = new DataStore.Invoice(account, amount, surname, firstName);
+        DataStore.invoiceStore.put(account, inv);
+        
+        log.info(">>>> [SYSTEM] Registered new invoice: account={}, amount={}", account, amount);
+        return "Invoice registered successfully: " + account + " for " + amount + " BYN";
+    }
+
     // Use RequestMapping to support both GET and POST for "New Protocol" testing
     @RequestMapping(
         value = { "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" },
-        method = { RequestMethod.GET, RequestMethod.POST }
+        method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.HEAD }
     )
     public void handleEripRequest(
             @RequestParam(value = "XML", required = false) String xmlParam,
@@ -37,34 +52,31 @@ public class EripXmlController {
         String uri = request.getRequestURI();
         String method = request.getMethod();
         
-        // Comprehensive logging of all incoming data for diagnostics
-        log.info(">>> [DEBUG] Incoming Request: {} {}", method, uri);
-        log.info(">>> [DEBUG] Query String: {}", request.getQueryString());
-        
+        if ("HEAD".equalsIgnoreCase(method)) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
+
         Map<String, String> queryParams = new HashMap<>();
         Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
             String paramName = parameterNames.nextElement();
             queryParams.put(paramName, request.getParameter(paramName));
-            log.info(">>> [DEBUG] Param: {} = {}", paramName, request.getParameter(paramName));
         }
 
         String xmlIn = (xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody;
         if (xmlIn != null) {
-            log.info(">>> [BRIDGE] INCOMING XML/Body: {}", xmlIn);
             DataStore.logXml(xmlIn);
         }
 
         Map<String, String> data = parseEripXml(xmlIn);
-        // Merge query params into data map (prefer XML if present)
         queryParams.forEach(data::putIfAbsent);
 
-        // Infer RequestType from URL or Parameter
         String type = data.get("RequestType");
         if (type == null) {
-            if (uri.contains("account-info") || "ServiceInfo".equalsIgnoreCase(data.get("type"))) type = "ServiceInfo";
-            else if (uri.contains("submit-payment") || "TransactionStart".equalsIgnoreCase(data.get("type"))) type = "TransactionStart";
-            else if (uri.contains("confirm-payment") || "TransactionResult".equalsIgnoreCase(data.get("type"))) type = "TransactionResult";
+            if (uri.contains("account-info")) type = "ServiceInfo";
+            else if (uri.contains("submit-payment")) type = "TransactionStart";
+            else if (uri.contains("confirm-payment")) type = "TransactionResult";
             else type = "ServiceInfo";
         }
 
@@ -73,18 +85,16 @@ public class EripXmlController {
         String requestId = data.getOrDefault("RequestId", data.getOrDefault("requestId", "1"));
         String transactionId = data.getOrDefault("TransactionId", data.getOrDefault("transactionId", ""));
         
-        double amount = 0.0;
+        double amountDecimal = 0.0;
         try {
             String rawAmount = data.get("Amount");
             if (rawAmount == null) rawAmount = data.get("amount");
             if (rawAmount != null) {
-                amount = Double.parseDouble(rawAmount.replace(",", "."));
+                amountDecimal = Double.parseDouble(rawAmount.replace(",", "."));
             }
-        } catch (Exception e) {
-            log.warn(">>> [BRIDGE] Amount parse failed");
-        }
+        } catch (Exception e) {}
 
-        log.info(">>> [BRIDGE] Final Logic: type={}, account={}, serviceNo={}", type, account, serviceNo);
+        log.info(">>> [BRIDGE] Processing {} for account={}", type, account);
 
         String outXml = "";
         try {
@@ -103,7 +113,7 @@ public class EripXmlController {
                 jsonReq.type = "submitPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
-                jsonReq.amount = (amount > 0) ? amount : 10.0;
+                jsonReq.amount = (amountDecimal > 0) ? amountDecimal : 10.0;
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
                 outXml = buildTransactionStartResponse(jsonRes, requestId, transactionId);
