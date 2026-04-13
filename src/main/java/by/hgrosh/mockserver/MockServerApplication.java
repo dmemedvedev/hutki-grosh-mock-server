@@ -35,8 +35,11 @@ public class MockServerApplication {
             
             String uri = req.getRequestURI();
             String method = req.getMethod();
+            String query = req.getQueryString();
             
-            log.info(">>>> [SYSTEM-DIAGNOSTIC] INCOMING: {} {} from {}", method, uri, req.getRemoteAddr());
+            log.info(">>>> [DIAGNOSTIC-RAW] {} {}{} from {} [UA: {}]", 
+                     method, uri, (query != null ? "?" + query : ""), 
+                     req.getRemoteAddr(), req.getHeader("User-Agent"));
             
             // Universal CORS support
             res.setHeader("Access-Control-Allow-Origin", "*");
