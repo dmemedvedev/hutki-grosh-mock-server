@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -22,7 +21,6 @@ public class EripXmlController {
     @Autowired
     private HutkiGroshJsonController jsonController;
 
-    // Use RequestMapping to support both GET and POST for "New Protocol" testing
     @RequestMapping(
         value = { "/erip", "/api/erip", "/accountInfo", "/submitPayment", "/confirmPayment" },
         method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.HEAD, RequestMethod.OPTIONS }
@@ -48,7 +46,14 @@ public class EripXmlController {
 
         Map<String, String> data = parseEripXml((xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody);
 
-        // US_3 improvement: extract account from XML tags OR URL parameters
+        String type = data.get("RequestType");
+        if (type == null) {
+            if (uri.contains("accountInfo")) type = "ServiceInfo";
+            else if (uri.contains("submitPayment")) type = "TransactionStart";
+            else if (uri.contains("confirmPayment")) type = "TransactionResult";
+            else type = "ServiceInfo";
+        }
+
         String account = data.get("PersonalAccount");
         if (account == null) account = request.getParameter("account");
         if (account == null) account = request.getParameter("PersonalAccount");
@@ -74,7 +79,6 @@ public class EripXmlController {
                 jsonReq.serviceId = Long.parseLong(serviceNo);
                 jsonReq.sessionId = "SID-" + (System.currentTimeMillis() % 10000);
 
-                // Handle parameters from ERIP (if any)
                 Map<String, String> eripParams = parseEripParameters((xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody);
                 if (!eripParams.isEmpty()) {
                     jsonReq.parameterList = new ArrayList<>();
@@ -88,7 +92,6 @@ public class EripXmlController {
 
                 HutkiGroshJsonController.AccountInfoResponse jsonRes = jsonController.accountInfo(jsonReq, null);
                 outXml = buildServiceInfoResponse(jsonRes, requestId);
-// ... existing TransactionStart/TransactionResult logic ...
 
             } else if ("TransactionStart".equals(type)) {
                 HutkiGroshJsonController.SubmitPaymentRequest jsonReq = new HutkiGroshJsonController.SubmitPaymentRequest();
@@ -136,7 +139,6 @@ public class EripXmlController {
             sb.append("<Error>").append(res.message != null ? res.message : "Счет не найден").append("</Error>");
         } else if ("ServiceInfo".equals(res.nextRqType) && res.parameterList != null) {
             sb.append("<ServiceInfo>");
-            // US_3: Return parameterList for gathering more info
             sb.append("<ParameterList>");
             for (DataStore.Parameter p : res.parameterList) {
                 sb.append("<Parameter Name=\"").append(p.label).append("\" Id=\"").append(p.id).append("\">");
@@ -149,7 +151,6 @@ public class EripXmlController {
             sb.append("</ServiceInfo>");
         } else {
             sb.append("<ServiceInfo>");
-            // Standard account display
             String debtStr = String.format("%.2f", res.amount).replace(".", ",");
             sb.append("<SessionId>").append(res.sessionId).append("</SessionId>");
             sb.append("<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"1000\" Currency=\"933\">");
@@ -163,7 +164,6 @@ public class EripXmlController {
             } else {
                 sb.append("<Name><Surname>Testov</Surname><FirstName>Test</FirstName><MiddleName/></Name>");
             }
-            
             sb.append("<Address><City>Minsk</City></Address>");
             sb.append("</ServiceInfo>");
         }
