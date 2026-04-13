@@ -12,6 +12,13 @@ public class DataStore {
     public static final List<String> jsonLogs = java.util.Collections.synchronizedList(new ArrayList<>());
     public static final Map<String, Invoice> invoiceStore = new ConcurrentHashMap<>();
 
+    static {
+        // Тестовые счета для новой услуги 12880001
+        invoiceStore.put("test1126", new Invoice("test1126", "45,00", "Medvedev", "Dmitry"));
+        invoiceStore.put("20587001", new Invoice("20587001", "100,50", "Ivanov", "Ivan"));
+        invoiceStore.put("100", new Invoice("100", "1,00", "Test", "User"));
+    }
+
     public static class Invoice {
         public String account;
         public String amount;
