@@ -1,6 +1,7 @@
 package by.hgrosh.mockserver.controller;
 
 import by.hgrosh.mockserver.model.DataStore;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +22,12 @@ public class EripXmlController {
     @Autowired
     private HutkiGroshJsonController jsonController;
 
-    @PostMapping(value = { "", "/", "/erip", "/api/erip" })
+    // Added new suffixes from the Cabinet screenshot: account-info, submit-payment, confirm-payment
+    @PostMapping(value = { "", "/", "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" })
     public void handleEripRequest(
             @RequestParam(value = "XML", required = false) String xmlParam,
             @RequestBody(required = false) String xmlBody,
+            HttpServletRequest request,
             HttpServletResponse response) throws IOException {
         
         String xmlIn = (xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody;
@@ -34,7 +37,17 @@ public class EripXmlController {
         DataStore.logXml(xmlIn);
 
         Map<String, String> data = parseEripXml(xmlIn);
-        String type = data.getOrDefault("RequestType", "ServiceInfo");
+        
+        // Infer RequestType from URL if it's missing or to be sure
+        String uri = request.getRequestURI();
+        String type = data.get("RequestType");
+        if (type == null) {
+            if (uri.contains("account-info")) type = "ServiceInfo";
+            else if (uri.contains("submit-payment")) type = "TransactionStart";
+            else if (uri.contains("confirm-payment")) type = "TransactionResult";
+            else type = "ServiceInfo";
+        }
+
         String account = data.getOrDefault("PersonalAccount", "unknown");
         String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
         String requestId = data.getOrDefault("RequestId", "1");
@@ -50,7 +63,7 @@ public class EripXmlController {
             log.warn(">>> [BRIDGE] Amount parse failed for: {}", data.get("Amount"));
         }
 
-        System.out.println(">>> [BRIDGE] Converting " + type + " for account: " + account);
+        System.out.println(">>> [BRIDGE] Converting " + type + " for account: " + account + " (URL: " + uri + ")");
 
         String outXml = "";
         try {
@@ -114,7 +127,7 @@ public class EripXmlController {
                 "<RequestId>" + requestId + "</RequestId>" +
                 "<ServiceInfo>" +
                 "<SessionId>" + res.sessionId + "</SessionId>" +
-                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"10000\" Currency=\"933\">" +
+                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"1000\" Currency=\"933\">" +
                 "<Debt>" + debtStr + "</Debt><Penalty>0,00</Penalty><PayAmount>" + debtStr + "</PayAmount>" +
                 "</Amount>" +
                 "<Name><Surname>" + res.clientName.surName + "</Surname>" +
@@ -126,10 +139,9 @@ public class EripXmlController {
     }
 
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId, String transactionId) {
+        // SIMPLIFIED: Reverting TransactionStart response to minimal working version
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionStart>" +
                 "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
                 "<TransactionId>" + transactionId + "</TransactionId>" +
