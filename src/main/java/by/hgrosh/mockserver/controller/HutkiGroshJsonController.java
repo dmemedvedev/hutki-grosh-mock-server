@@ -49,8 +49,11 @@ public class HutkiGroshJsonController {
         public String nextRqType = "TransactionStart"; // Default
         public String account;
         public double amount;
-        public String payAmount; // String version with comma
-        public String debt;      // String version with comma
+        public double totalAmount;
+        public double payAmount;
+        public String totalAmountString;
+        public String payAmountString;
+        public String debt;
         public double penalty = 0.0;
         public String sessionId;
         public ClientName clientName;
@@ -132,8 +135,11 @@ public class HutkiGroshJsonController {
         res.account = invoice.account;
         double amountVal = Double.parseDouble(invoice.amount);
         res.amount = amountVal;
-        res.payAmount = String.format("%.2f", amountVal).replace(".", ",");
-        res.debt = res.payAmount;
+        res.totalAmount = amountVal;
+        res.payAmount = amountVal;
+        res.totalAmountString = String.format("%.2f", amountVal).replace(".", ",");
+        res.payAmountString = res.totalAmountString;
+        res.debt = res.totalAmountString;
         res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
         res.clientName = new ClientName();
         res.clientName.firstName = invoice.firstName;
