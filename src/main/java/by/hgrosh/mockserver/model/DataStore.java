@@ -12,7 +12,7 @@ public class DataStore {
     public static final long SERVICE_ID = 12880001L;
     
     // Secret phrase for MD5 signing (as per US_1)
-    public static final String HASH_PHRASE = "SECRET_TOKEN_123";
+    public static final String HASH_PHRASE = "077ad577a2b0458ea329eaf91ae01130";
 
     public static class Parameter {
         public String id;
