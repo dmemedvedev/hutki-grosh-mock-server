@@ -41,11 +41,11 @@ public class MockServerApplication {
                      method, uri, (query != null ? "?" + query : ""), 
                      req.getRemoteAddr(), req.getHeader("User-Agent"));
             
-            // Universal CORS support
+            // Universal CORS support (Strict compliance for HG Cabinet Player)
             res.setHeader("Access-Control-Allow-Origin", "*");
             res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
-            res.setHeader("Access-Control-Allow-Headers", "*");
-            res.setHeader("Access-Control-Allow-Credentials", "true");
+            res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Signature, Authorization");
+            res.setHeader("Access-Control-Allow-Credentials", "false");
 
             if ("OPTIONS".equalsIgnoreCase(method)) {
                 log.info(">>>> [SYSTEM-DIAGNOSTIC] Responding to OPTIONS pre-flight for {}", uri);
