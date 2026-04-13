@@ -129,7 +129,7 @@ public class HutkiGroshJsonController {
 
         res.account = invoice.account;
         res.amount = Double.parseDouble(invoice.amount);
-        res.sessionId = req.sessionId != null ? req.sessionId : "SID-" + (System.currentTimeMillis() % 10000);
+        res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
         res.clientName = new ClientName();
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
