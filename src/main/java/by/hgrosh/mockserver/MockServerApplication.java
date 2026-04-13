@@ -30,8 +30,13 @@ public class MockServerApplication {
         @Override
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
                 throws IOException, ServletException {
+            
             HttpServletRequest req = (HttpServletRequest) request;
             HttpServletResponse res = (HttpServletResponse) response;
+            
+            // Wrap request to capture body
+            org.springframework.web.util.ContentCachingRequestWrapper wrappedRequest = 
+                new org.springframework.web.util.ContentCachingRequestWrapper(req);
             
             String uri = req.getRequestURI();
             String method = req.getMethod();
@@ -48,7 +53,6 @@ public class MockServerApplication {
             res.setHeader("Access-Control-Allow-Credentials", "false");
 
             if ("OPTIONS".equalsIgnoreCase(method)) {
-                log.info(">>>> [SYSTEM-DIAGNOSTIC] Responding to OPTIONS pre-flight for {}", uri);
                 res.setStatus(HttpServletResponse.SC_OK);
                 return;
             }
@@ -57,7 +61,15 @@ public class MockServerApplication {
             Collections.list(req.getHeaderNames()).forEach(h -> 
                 log.info(">>>> [SYSTEM-DIAGNOSTIC] Header: {} = {}", h, req.getHeader(h)));
             
-            chain.doFilter(request, response);
+            chain.doFilter(wrappedRequest, response);
+
+            // Log body after processing
+            byte[] bodyArray = wrappedRequest.getContentAsByteArray();
+            if (bodyArray.length > 0) {
+                String body = new String(bodyArray, wrappedRequest.getCharacterEncoding() != null ? 
+                                         wrappedRequest.getCharacterEncoding() : "UTF-8");
+                log.info(">>>> [DIAGNOSTIC-BODY] REQUEST BODY: {}", body);
+            }
         }
     }
 }
