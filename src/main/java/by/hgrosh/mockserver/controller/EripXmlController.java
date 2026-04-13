@@ -98,7 +98,7 @@ public class EripXmlController {
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
 
-                HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
+                HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq, account);
                 outXml = buildTransactionStartResponse(jsonRes, requestId, transactionId);
 
             } else if ("TransactionResult".equals(type)) {
@@ -111,7 +111,7 @@ public class EripXmlController {
                 String trxIdStr = data.getOrDefault("ServiceProvider_TrxId", "0");
                 jsonReq.unipayTrxId = Long.parseLong(trxIdStr);
 
-                jsonController.confirmPayment(jsonReq);
+                jsonController.confirmPayment(jsonReq, account);
                 outXml = buildTransactionResultResponse(requestId, transactionId, trxIdStr);
             }
         } catch (Exception e) {
