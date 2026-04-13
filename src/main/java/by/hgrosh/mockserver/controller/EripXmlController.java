@@ -139,9 +139,10 @@ public class EripXmlController {
     }
 
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId, String transactionId) {
-        // SIMPLIFIED: Reverting TransactionStart response to minimal working version
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
+                "<Version>1</Version>" +
+                "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionStart>" +
                 "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
                 "<TransactionId>" + transactionId + "</TransactionId>" +
