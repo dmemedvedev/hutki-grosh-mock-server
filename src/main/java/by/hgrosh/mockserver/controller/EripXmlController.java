@@ -48,18 +48,20 @@ public class EripXmlController {
 
         Map<String, String> data = parseEripXml((xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody);
 
-        String type = data.get("RequestType");
-        if (type == null) {
-            if (uri.contains("accountInfo")) type = "ServiceInfo";
-            else if (uri.contains("submitPayment")) type = "TransactionStart";
-            else if (uri.contains("confirmPayment")) type = "TransactionResult";
-            else type = "ServiceInfo";
-        }
+        // US_3 improvement: extract account from XML tags OR URL parameters
+        String account = data.get("PersonalAccount");
+        if (account == null) account = request.getParameter("account");
+        if (account == null) account = request.getParameter("PersonalAccount");
+        if (account == null) account = "unknown";
 
-        String account = data.getOrDefault("PersonalAccount", data.getOrDefault("account", "unknown"));
-        String serviceNo = data.getOrDefault("ServiceNo", data.getOrDefault("serviceNo", String.valueOf(DataStore.SERVICE_ID)));
-        String requestId = data.getOrDefault("RequestId", data.getOrDefault("requestId", "1"));
-        String transactionId = data.getOrDefault("TransactionId", data.getOrDefault("transactionId", ""));
+        String serviceNo = data.getOrDefault("ServiceNo", request.getParameter("serviceNo"));
+        if (serviceNo == null) serviceNo = String.valueOf(DataStore.SERVICE_ID);
+
+        String requestId = data.getOrDefault("RequestId", request.getParameter("requestId"));
+        if (requestId == null) requestId = "1";
+
+        String transactionId = data.getOrDefault("TransactionId", request.getParameter("transactionId"));
+        if (transactionId == null) transactionId = "";
         
         log.info(">>> [BRIDGE] Processing {} for account={}", type, account);
 
@@ -86,6 +88,7 @@ public class EripXmlController {
 
                 HutkiGroshJsonController.AccountInfoResponse jsonRes = jsonController.accountInfo(jsonReq, null);
                 outXml = buildServiceInfoResponse(jsonRes, requestId);
+// ... existing TransactionStart/TransactionResult logic ...
 
             } else if ("TransactionStart".equals(type)) {
                 HutkiGroshJsonController.SubmitPaymentRequest jsonReq = new HutkiGroshJsonController.SubmitPaymentRequest();
@@ -128,9 +131,11 @@ public class EripXmlController {
         sb.append("<ServiceProvider_Response>");
         sb.append("<Version>1</Version>");
         sb.append("<RequestId>").append(requestId).append("</RequestId>");
-        sb.append("<ServiceInfo>");
         
-        if ("ServiceInfo".equals(res.nextRqType) && res.parameterList != null) {
+        if ("deny".equals(res.responseCode)) {
+            sb.append("<Error>").append(res.message != null ? res.message : "Счет не найден").append("</Error>");
+        } else if ("ServiceInfo".equals(res.nextRqType) && res.parameterList != null) {
+            sb.append("<ServiceInfo>");
             // US_3: Return parameterList for gathering more info
             sb.append("<ParameterList>");
             for (DataStore.Parameter p : res.parameterList) {
@@ -141,20 +146,29 @@ public class EripXmlController {
                 sb.append("</Parameter>");
             }
             sb.append("</ParameterList>");
+            sb.append("</ServiceInfo>");
         } else {
+            sb.append("<ServiceInfo>");
             // Standard account display
             String debtStr = String.format("%.2f", res.amount).replace(".", ",");
             sb.append("<SessionId>").append(res.sessionId).append("</SessionId>");
             sb.append("<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"1000\" Currency=\"933\">");
             sb.append("<Debt>").append(debtStr).append("</Debt><Penalty>0,00</Penalty><PayAmount>").append(debtStr).append("</PayAmount>");
             sb.append("</Amount>");
-            sb.append("<Name><Surname>").append(res.clientName.surName).append("</Surname>");
-            sb.append("<FirstName>").append(res.clientName.firstName).append("</FirstName>");
-            sb.append("<MiddleName/></Name>");
+            
+            if (res.clientName != null) {
+                sb.append("<Name><Surname>").append(res.clientName.surName != null ? res.clientName.surName : "").append("</Surname>");
+                sb.append("<FirstName>").append(res.clientName.firstName != null ? res.clientName.firstName : "").append("</FirstName>");
+                sb.append("<MiddleName/></Name>");
+            } else {
+                sb.append("<Name><Surname>Testov</Surname><FirstName>Test</FirstName><MiddleName/></Name>");
+            }
+            
             sb.append("<Address><City>Minsk</City></Address>");
+            sb.append("</ServiceInfo>");
         }
         
-        sb.append("</ServiceInfo></ServiceProvider_Response>");
+        sb.append("</ServiceProvider_Response>");
         return sb.toString();
     }
 
