@@ -150,11 +150,7 @@ public class HutkiGroshJsonController {
         res.address.city = "Minsk";
 
         if (invoice.account.equals("multistep")) {
-            DataStore.Parameter p = new DataStore.Parameter();
-            p.id = "counter_reading";
-            p.label = "Показания счетчика";
-            p.type = "p";
-            p.visible = "Y";
+            DataStore.Parameter p = new DataStore.Parameter("counter_reading", "Показания счетчика", "p", true);
             res.parameterList = Collections.singletonList(p);
             res.nextRqType = "ServiceInfo";
         } else {
