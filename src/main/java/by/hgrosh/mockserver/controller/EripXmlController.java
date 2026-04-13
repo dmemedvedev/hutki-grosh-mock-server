@@ -38,6 +38,7 @@ public class EripXmlController {
         String account = data.getOrDefault("PersonalAccount", "unknown");
         String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
         String requestId = data.getOrDefault("RequestId", "1");
+        String transactionId = data.getOrDefault("TransactionId", "");
         
         double amount = 0.0;
         try {
@@ -71,7 +72,7 @@ public class EripXmlController {
                 jsonReq.amount = (amount > 0) ? amount : 10.0;
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
-                outXml = buildTransactionStartResponse(jsonRes, requestId);
+                outXml = buildTransactionStartResponse(jsonRes, requestId, transactionId);
 
             } else if ("TransactionResult".equals(type)) {
                 HutkiGroshJsonController.ConfirmPaymentRequest jsonReq = new HutkiGroshJsonController.ConfirmPaymentRequest();
@@ -84,7 +85,7 @@ public class EripXmlController {
                 jsonReq.unipayTrxId = Long.parseLong(trxIdStr);
 
                 jsonController.confirmPayment(jsonReq);
-                outXml = buildTransactionResultResponse(requestId);
+                outXml = buildTransactionResultResponse(requestId, transactionId, trxIdStr);
             }
         } catch (Exception e) {
             log.error("Bridge Error: {}", e.getMessage());
@@ -102,7 +103,6 @@ public class EripXmlController {
     }
 
     private String formatAmount(double amount) {
-        // Гарантируем формат X,XX (две цифры после запятой)
         return String.format("%.2f", amount).replace(".", ",");
     }
 
@@ -118,28 +118,36 @@ public class EripXmlController {
                 "<Debt>" + debtStr + "</Debt><Penalty>0,00</Penalty><PayAmount>" + debtStr + "</PayAmount>" +
                 "</Amount>" +
                 "<Name><Surname>" + res.clientName.surName + "</Surname>" +
-                "<FirstName>" + res.clientName.firstName + "</FirstName></Name>" +
+                "<FirstName>" + res.clientName.firstName + "</FirstName>" +
+                "<MiddleName/>" +
+                "</Name>" +
                 "<Address><City>Minsk</City></Address>" +
                 "</ServiceInfo></ServiceProvider_Response>";
     }
 
-    private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId) {
+    private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId, String transactionId) {
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
                 "<Version>1</Version>" +
                 "<RequestId>" + requestId + "</RequestId>" +
                 "<TransactionStart>" +
                 "<ServiceProvider_TrxId>" + res.unipayTrxId + "</ServiceProvider_TrxId>" +
+                "<TransactionId>" + transactionId + "</TransactionId>" +
+                "<Status>0</Status>" +
                 "<Info><InfoLine>Оплата принята</InfoLine></Info>" +
                 "</TransactionStart></ServiceProvider_Response>";
     }
 
-    private String buildTransactionResultResponse(String requestId) {
+    private String buildTransactionResultResponse(String requestId, String transactionId, String trxIdStr) {
         return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
                 "<ServiceProvider_Response>" +
                 "<Version>1</Version>" +
                 "<RequestId>" + requestId + "</RequestId>" +
-                "<TransactionResult><Status>0</Status></TransactionResult>" +
+                "<TransactionResult>" +
+                "<ServiceProvider_TrxId>" + trxIdStr + "</ServiceProvider_TrxId>" +
+                "<TransactionId>" + transactionId + "</TransactionId>" +
+                "<Status>0</Status>" +
+                "</TransactionResult>" +
                 "</ServiceProvider_Response>";
     }
 
@@ -150,7 +158,7 @@ public class EripXmlController {
             org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
             
-            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId" };
+            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId", "TransactionId" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {
