@@ -24,12 +24,21 @@ public class MockManagementController {
             @RequestParam String account,
             @RequestParam String amount,
             @RequestParam(defaultValue = "Medvedev") String surname,
-            @RequestParam(defaultValue = "Dmitry") String firstName) {
+            @RequestParam(defaultValue = "Dmitry") String firstName,
+            @RequestParam(required = false) String requiredParams) {
         
-        // Нормализуем сумму (для внутреннего хранения)
         String normAmount = amount.replace(",", ".");
+        DataStore.Invoice inv = new DataStore.Invoice(account, normAmount, surname, firstName);
         
-        DataStore.invoiceStore.put(account, new DataStore.Invoice(account, normAmount, surname, firstName));
-        return "OK: Invoice " + account + " registered for " + normAmount + " BYN (Accessible via JSON API)";
+        if (requiredParams != null && !requiredParams.isEmpty()) {
+            String[] params = requiredParams.split(",");
+            for (String p : params) {
+                inv.requiredParameters.add(new DataStore.Parameter(p.trim(), "Параметр " + p.trim(), "string", true));
+            }
+        }
+        
+        DataStore.invoiceStore.put(account, inv);
+        return "OK: Invoice " + account + " registered for " + normAmount + " BYN. Required params: " + 
+               (requiredParams != null ? requiredParams : "none");
     }
 }

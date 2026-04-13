@@ -10,9 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Enumeration;
+import java.util.*;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -43,20 +41,12 @@ public class EripXmlController {
             return;
         }
 
-        Map<String, String> queryParams = new HashMap<>();
-        Enumeration<String> parameterNames = request.getParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String paramName = parameterNames.nextElement();
-            queryParams.put(paramName, request.getParameter(paramName));
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
         }
 
-        String xmlIn = (xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody;
-        if (xmlIn != null) {
-            DataStore.logXml(xmlIn);
-        }
-
-        Map<String, String> data = parseEripXml(xmlIn);
-        queryParams.forEach(data::putIfAbsent);
+        Map<String, String> data = parseEripXml((xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody);
 
         String type = data.get("RequestType");
         if (type == null) {
@@ -71,15 +61,6 @@ public class EripXmlController {
         String requestId = data.getOrDefault("RequestId", data.getOrDefault("requestId", "1"));
         String transactionId = data.getOrDefault("TransactionId", data.getOrDefault("transactionId", ""));
         
-        double amountDecimal = 0.0;
-        try {
-            String rawAmount = data.get("Amount");
-            if (rawAmount == null) rawAmount = data.get("amount");
-            if (rawAmount != null) {
-                amountDecimal = Double.parseDouble(rawAmount.replace(",", "."));
-            }
-        } catch (Exception e) {}
-
         log.info(">>> [BRIDGE] Processing {} for account={}", type, account);
 
         String outXml = "";
@@ -91,7 +72,19 @@ public class EripXmlController {
                 jsonReq.serviceId = Long.parseLong(serviceNo);
                 jsonReq.sessionId = "SID-" + (System.currentTimeMillis() % 10000);
 
-                HutkiGroshJsonController.AccountInfoResponse jsonRes = jsonController.accountInfo(jsonReq);
+                // Handle parameters from ERIP (if any)
+                Map<String, String> eripParams = parseEripParameters((xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody);
+                if (!eripParams.isEmpty()) {
+                    jsonReq.parameterList = new ArrayList<>();
+                    for (Map.Entry<String, String> entry : eripParams.entrySet()) {
+                        HutkiGroshJsonController.ParameterValue pv = new HutkiGroshJsonController.ParameterValue();
+                        pv.id = entry.getKey();
+                        pv.value = entry.getValue();
+                        jsonReq.parameterList.add(pv);
+                    }
+                }
+
+                HutkiGroshJsonController.AccountInfoResponse jsonRes = jsonController.accountInfo(jsonReq, null);
                 outXml = buildServiceInfoResponse(jsonRes, requestId);
 
             } else if ("TransactionStart".equals(type)) {
@@ -99,7 +92,6 @@ public class EripXmlController {
                 jsonReq.type = "submitPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
-                jsonReq.amount = (amountDecimal > 0) ? amountDecimal : 10.0;
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq);
                 outXml = buildTransactionStartResponse(jsonRes, requestId, transactionId);
@@ -125,34 +117,45 @@ public class EripXmlController {
         log.info(">>> [BRIDGE] RESPONSE XML:\n{}", outXml);
 
         byte[] outBytes = outXml.getBytes(ENCODING);
-        response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("text/xml;charset=windows-1251");
-        response.setContentLength(outBytes.length);
         response.getOutputStream().write(outBytes);
         response.getOutputStream().flush();
     }
 
-    private String formatAmount(double amount) {
-        return String.format("%.2f", amount).replace(".", ",");
-    }
-
     private String buildServiceInfoResponse(HutkiGroshJsonController.AccountInfoResponse res, String requestId) {
-        String debtStr = formatAmount(res.amount);
-        return "<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>" +
-                "<ServiceProvider_Response>" +
-                "<Version>1</Version>" +
-                "<RequestId>" + requestId + "</RequestId>" +
-                "<ServiceInfo>" +
-                "<SessionId>" + res.sessionId + "</SessionId>" +
-                "<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"1000\" Currency=\"933\">" +
-                "<Debt>" + debtStr + "</Debt><Penalty>0,00</Penalty><PayAmount>" + debtStr + "</PayAmount>" +
-                "</Amount>" +
-                "<Name><Surname>" + res.clientName.surName + "</Surname>" +
-                "<FirstName>" + res.clientName.firstName + "</FirstName>" +
-                "<MiddleName/>" +
-                "</Name>" +
-                "<Address><City>Minsk</City></Address>" +
-                "</ServiceInfo></ServiceProvider_Response>";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"WINDOWS-1251\" standalone=\"yes\"?>");
+        sb.append("<ServiceProvider_Response>");
+        sb.append("<Version>1</Version>");
+        sb.append("<RequestId>").append(requestId).append("</RequestId>");
+        sb.append("<ServiceInfo>");
+        
+        if ("ServiceInfo".equals(res.nextRqType) && res.parameterList != null) {
+            // US_3: Return parameterList for gathering more info
+            sb.append("<ParameterList>");
+            for (DataStore.Parameter p : res.parameterList) {
+                sb.append("<Parameter Name=\"").append(p.label).append("\" Id=\"").append(p.id).append("\">");
+                sb.append("<Type>").append(p.type).append("</Type>");
+                sb.append("<Label>").append(p.label).append("</Label>");
+                sb.append("<Required>").append(p.required ? "Y" : "N").append("</Required>");
+                sb.append("</Parameter>");
+            }
+            sb.append("</ParameterList>");
+        } else {
+            // Standard account display
+            String debtStr = String.format("%.2f", res.amount).replace(".", ",");
+            sb.append("<SessionId>").append(res.sessionId).append("</SessionId>");
+            sb.append("<Amount Editable=\"Y\" MinAmount=\"0,01\" MaxAmount=\"1000\" Currency=\"933\">");
+            sb.append("<Debt>").append(debtStr).append("</Debt><Penalty>0,00</Penalty><PayAmount>").append(debtStr).append("</PayAmount>");
+            sb.append("</Amount>");
+            sb.append("<Name><Surname>").append(res.clientName.surName).append("</Surname>");
+            sb.append("<FirstName>").append(res.clientName.firstName).append("</FirstName>");
+            sb.append("<MiddleName/></Name>");
+            sb.append("<Address><City>Minsk</City></Address>");
+        }
+        
+        sb.append("</ServiceInfo></ServiceProvider_Response>");
+        return sb.toString();
     }
 
     private String buildTransactionStartResponse(HutkiGroshJsonController.SubmitPaymentResponse res, String requestId, String transactionId) {
@@ -198,5 +201,26 @@ public class EripXmlController {
             }
         } catch (Exception e) {}
         return map;
+    }
+
+    private Map<String, String> parseEripParameters(String xml) {
+        Map<String, String> params = new HashMap<>();
+        if (xml == null || xml.isEmpty()) return params;
+        try {
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
+            org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
+            
+            org.w3c.dom.NodeList nodes = doc.getElementsByTagName("Parameter");
+            for (int i = 0; i < nodes.getLength(); i++) {
+                org.w3c.dom.Element el = (org.w3c.dom.Element) nodes.item(i);
+                String id = el.getAttribute("Id");
+                String value = el.getTextContent();
+                if (id != null && !id.isEmpty()) {
+                    params.put(id, value);
+                }
+            }
+        } catch (Exception e) {}
+        return params;
     }
 }
