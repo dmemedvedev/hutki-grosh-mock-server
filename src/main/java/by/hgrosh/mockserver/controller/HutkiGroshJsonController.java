@@ -8,7 +8,7 @@ import java.security.MessageDigest;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping(value = { "/api", "/" })
 @CrossOrigin(origins = "*")
 public class HutkiGroshJsonController {
 
@@ -65,18 +65,28 @@ public class HutkiGroshJsonController {
         public long unipayTrxId;
     }
 
-    @PostMapping("/account-info")
-    public AccountInfoResponse accountInfo(@RequestBody AccountInfoRequest req, 
-                                          @RequestHeader(value = "X-Signature", required = false) String signature) {
+    @RequestMapping(value = { "/accountInfo", "/account-info" }, method = { RequestMethod.GET, RequestMethod.POST })
+    public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req, 
+                                          @RequestHeader(value = "X-Signature", required = false) String signature,
+                                          @RequestParam(required = false) String account) {
+        
+        // Handle both JSON body and Query Parameters (for GET tests)
+        if (req == null) {
+            req = new AccountInfoRequest();
+            req.account = account;
+            req.type = "accountInfo";
+        } else if (req.account == null) {
+            req.account = account;
+        }
+
         DataStore.logJson("Incoming AccountInfo: " + req.account);
         
         // MD5 Verification (US_1)
         if (signature != null) {
             log.info(">>>> [SECURITY] Received signature: {}", signature);
-            // In a real scenario, we would verify MD5(reqBody + DataStore.HASH_PHRASE)
         }
 
-        DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account);
+        DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
         AccountInfoResponse res = new AccountInfoResponse();
         
         if (invoice == null) {
@@ -111,7 +121,7 @@ public class HutkiGroshJsonController {
 
         res.account = invoice.account;
         res.amount = Double.parseDouble(invoice.amount);
-        res.sessionId = req.sessionId != null ? req.sessionId : "SID-" + System.currentTimeMillis();
+        res.sessionId = req.sessionId != null ? req.sessionId : "SID-" + (System.currentTimeMillis() % 10000);
         res.clientName = new ClientName();
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
@@ -119,16 +129,27 @@ public class HutkiGroshJsonController {
         return res;
     }
 
-    @PostMapping("/submit-payment")
-    public SubmitPaymentResponse submitPayment(@RequestBody SubmitPaymentRequest req) {
+    @RequestMapping(value = { "/submitPayment", "/submit-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
+    public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
+                                              @RequestParam(required = false) String account) {
+        if (req == null) {
+            req = new SubmitPaymentRequest();
+            req.account = account;
+        }
         log.info(">>>> [JSON] SubmitPayment for account={}", req.account);
         SubmitPaymentResponse res = new SubmitPaymentResponse();
         res.unipayTrxId = System.currentTimeMillis() / 1000;
         return res;
     }
 
-    @PostMapping("/confirm-payment")
-    public Map<String, Object> confirmPayment(@RequestBody ConfirmPaymentRequest req) {
+    @RequestMapping(value = { "/confirmPayment", "/confirm-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
+    public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
+                                             @RequestParam(required = false) String account) {
+        if (req == null) {
+            req = new ConfirmPaymentRequest();
+            req.account = account;
+            req.confirmed = true;
+        }
         log.info(">>>> [JSON] ConfirmPayment for account={}, confirmed={}", req.account, req.confirmed);
         Map<String, Object> res = new HashMap<>();
         res.put("responseCode", "allow");

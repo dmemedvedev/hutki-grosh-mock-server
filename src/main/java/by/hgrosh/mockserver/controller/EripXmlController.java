@@ -22,7 +22,7 @@ public class EripXmlController {
     private HutkiGroshJsonController jsonController;
 
     @RequestMapping(
-        value = { "/erip", "/api/erip", "/accountInfo", "/submitPayment", "/confirmPayment" },
+        value = { "/erip", "/api/erip" },
         method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.HEAD, RequestMethod.OPTIONS }
     )
     public void handleEripRequest(
