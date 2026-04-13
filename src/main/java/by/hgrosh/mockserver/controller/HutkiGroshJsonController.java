@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.Locale;
 
 @RestController
 @RequestMapping(value = { "/api", "/" })
@@ -46,14 +47,14 @@ public class HutkiGroshJsonController {
     // DTO for responses
     public static class AccountInfoResponse {
         public String responseCode = "allow";
-        public String nextRqType = "TransactionStart"; // Default
+        public String nextRqType = "TransactionStart";
         public String account;
-        public double amount;
-        public double totalAmount;
-        public double payAmount;
-        public String totalAmountString;
-        public String payAmountString;
+        public String amount;  // Changed to String for strict parsing
+        public String totalAmount;
+        public String payAmount;
         public String debt;
+        public String editable = "Y"; // From US_3 documentation
+        public int raCode = 1;
         public double penalty = 0.0;
         public String sessionId;
         public ClientName clientName;
@@ -134,12 +135,12 @@ public class HutkiGroshJsonController {
 
         res.account = invoice.account;
         double amountVal = Double.parseDouble(invoice.amount);
-        res.amount = amountVal;
-        res.totalAmount = amountVal;
-        res.payAmount = amountVal;
-        res.totalAmountString = String.format("%.2f", amountVal).replace(".", ",");
-        res.payAmountString = res.totalAmountString;
-        res.debt = res.totalAmountString;
+        String formattedAmount = String.format(Locale.US, "%.2f", amountVal);
+        res.amount = formattedAmount;
+        res.totalAmount = formattedAmount;
+        res.payAmount = formattedAmount;
+        res.debt = formattedAmount;
+        res.editable = "Y";
         res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
         res.clientName = new ClientName();
         res.clientName.firstName = invoice.firstName;
