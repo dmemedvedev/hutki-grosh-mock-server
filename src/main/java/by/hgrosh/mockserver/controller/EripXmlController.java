@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Enumeration;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -22,48 +23,68 @@ public class EripXmlController {
     @Autowired
     private HutkiGroshJsonController jsonController;
 
-    // Added new suffixes from the Cabinet screenshot: account-info, submit-payment, confirm-payment
-    @PostMapping(value = { "", "/", "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" })
+    // Use RequestMapping to support both GET and POST for "New Protocol" testing
+    @RequestMapping(
+        value = { "", "/", "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" },
+        method = { RequestMethod.GET, RequestMethod.POST }
+    )
     public void handleEripRequest(
             @RequestParam(value = "XML", required = false) String xmlParam,
             @RequestBody(required = false) String xmlBody,
             HttpServletRequest request,
             HttpServletResponse response) throws IOException {
         
-        String xmlIn = (xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody;
-        if (xmlIn == null || xmlIn.isEmpty()) return;
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        
+        // Comprehensive logging of all incoming data for diagnostics
+        log.info(">>> [DEBUG] Incoming Request: {} {}", method, uri);
+        log.info(">>> [DEBUG] Query String: {}", request.getQueryString());
+        
+        Map<String, String> queryParams = new HashMap<>();
+        Enumeration<String> parameterNames = request.getParameterNames();
+        while (parameterNames.hasMoreElements()) {
+            String paramName = parameterNames.nextElement();
+            queryParams.put(paramName, request.getParameter(paramName));
+            log.info(">>> [DEBUG] Param: {} = {}", paramName, request.getParameter(paramName));
+        }
 
-        log.info(">>> [BRIDGE] INCOMING XML: {}", xmlIn);
-        DataStore.logXml(xmlIn);
+        String xmlIn = (xmlParam != null && !xmlParam.isEmpty()) ? xmlParam : xmlBody;
+        if (xmlIn != null) {
+            log.info(">>> [BRIDGE] INCOMING XML/Body: {}", xmlIn);
+            DataStore.logXml(xmlIn);
+        }
 
         Map<String, String> data = parseEripXml(xmlIn);
-        
-        // Infer RequestType from URL if it's missing or to be sure
-        String uri = request.getRequestURI();
+        // Merge query params into data map (prefer XML if present)
+        queryParams.forEach(data::putIfAbsent);
+
+        // Infer RequestType from URL or Parameter
         String type = data.get("RequestType");
         if (type == null) {
-            if (uri.contains("account-info")) type = "ServiceInfo";
-            else if (uri.contains("submit-payment")) type = "TransactionStart";
-            else if (uri.contains("confirm-payment")) type = "TransactionResult";
+            if (uri.contains("account-info") || "ServiceInfo".equalsIgnoreCase(data.get("type"))) type = "ServiceInfo";
+            else if (uri.contains("submit-payment") || "TransactionStart".equalsIgnoreCase(data.get("type"))) type = "TransactionStart";
+            else if (uri.contains("confirm-payment") || "TransactionResult".equalsIgnoreCase(data.get("type"))) type = "TransactionResult";
             else type = "ServiceInfo";
         }
 
-        String account = data.getOrDefault("PersonalAccount", "unknown");
-        String serviceNo = data.getOrDefault("ServiceNo", String.valueOf(DataStore.SERVICE_ID));
-        String requestId = data.getOrDefault("RequestId", "1");
-        String transactionId = data.getOrDefault("TransactionId", "");
+        String account = data.getOrDefault("PersonalAccount", data.getOrDefault("account", "unknown"));
+        String serviceNo = data.getOrDefault("ServiceNo", data.getOrDefault("serviceNo", String.valueOf(DataStore.SERVICE_ID)));
+        String requestId = data.getOrDefault("RequestId", data.getOrDefault("requestId", "1"));
+        String transactionId = data.getOrDefault("TransactionId", data.getOrDefault("transactionId", ""));
         
         double amount = 0.0;
         try {
             String rawAmount = data.get("Amount");
+            if (rawAmount == null) rawAmount = data.get("amount");
             if (rawAmount != null) {
                 amount = Double.parseDouble(rawAmount.replace(",", "."));
             }
         } catch (Exception e) {
-            log.warn(">>> [BRIDGE] Amount parse failed for: {}", data.get("Amount"));
+            log.warn(">>> [BRIDGE] Amount parse failed");
         }
 
-        System.out.println(">>> [BRIDGE] Converting " + type + " for account: " + account + " (URL: " + uri + ")");
+        log.info(">>> [BRIDGE] Final Logic: type={}, account={}, serviceNo={}", type, account, serviceNo);
 
         String outXml = "";
         try {
@@ -166,6 +187,7 @@ public class EripXmlController {
 
     private Map<String, String> parseEripXml(String xml) {
         Map<String, String> map = new HashMap<>();
+        if (xml == null || xml.isEmpty()) return map;
         try {
             javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
             org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
