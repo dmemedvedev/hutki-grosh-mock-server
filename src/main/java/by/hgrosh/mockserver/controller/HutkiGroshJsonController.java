@@ -46,21 +46,23 @@ public class HutkiGroshJsonController {
 
     // DTO for responses
     public static class AccountInfoResponse {
+        public String status = "ok";
         public String responseCode = "allow";
         public String nextRqType = "TransactionStart";
         public String account;
-        public String amount;  // Changed to String for strict parsing
-        public String totalAmount;
-        public String payAmount;
-        public String debt;
-        public String editable = "Y"; // From US_3 documentation
+        public String billId = "";
+        public double amount;
+        public double totalAmount;
+        public double payAmount;
+        public String debt = "";
+        public String editable = "Y";
         public int raCode = 1;
         public double penalty = 0.0;
         public String sessionId;
-        public ClientName clientName;
-        public Address address;
-        public List<DataStore.Parameter> parameterList;
-        public String message;
+        public ClientName clientName = new ClientName();
+        public Address address = new Address();
+        public List<DataStore.Parameter> parameterList = new ArrayList<>();
+        public String message = "";
     }
 
     public static class ClientName {
@@ -135,18 +137,30 @@ public class HutkiGroshJsonController {
 
         res.account = invoice.account;
         double amountVal = Double.parseDouble(invoice.amount);
-        String formattedAmount = String.format(Locale.US, "%.2f", amountVal);
-        res.amount = formattedAmount;
-        res.totalAmount = formattedAmount;
-        res.payAmount = formattedAmount;
-        res.debt = formattedAmount;
+        res.amount = amountVal;
+        res.totalAmount = amountVal;
+        res.payAmount = amountVal;
+        res.debt = String.format(Locale.US, "%.2f", amountVal).replace(".", ",");
         res.editable = "Y";
         res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
-        res.clientName = new ClientName();
+        
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
         res.address = new Address();
         res.address.city = "Minsk";
+
+        if (invoice.account.equals("multistep")) {
+            DataStore.Parameter p = new DataStore.Parameter();
+            p.id = "counter_reading";
+            p.label = "Показания счетчика";
+            p.type = "p";
+            p.visible = "Y";
+            res.parameterList = Collections.singletonList(p);
+            res.nextRqType = "ServiceInfo";
+        } else {
+            res.parameterList = new ArrayList<>();
+            res.nextRqType = "TransactionStart";
+        }
 
         return res;
     }
