@@ -24,30 +24,6 @@ public class EripXmlController {
     @Autowired
     private HutkiGroshJsonController jsonController;
 
-    // Help the user register invoices via URL for testing
-    @RequestMapping(value = "/register-invoice", method = { RequestMethod.GET, RequestMethod.POST })
-    public ResponseEntity<String> registerInvoice(
-            @RequestParam(value = "account", required = false) String account,
-            @RequestParam(value = "amount", required = false) String amount,
-            @RequestParam(value = "surname", defaultValue = "Testov") String surname,
-            @RequestParam(value = "firstName", defaultValue = "Test") String firstName) {
-        
-        try {
-            if (account == null || amount == null) {
-                return ResponseEntity.badRequest().body("Error: Missing 'account' or 'amount' parameters.");
-            }
-            
-            DataStore.Invoice inv = new DataStore.Invoice(account, amount, surname, firstName);
-            DataStore.invoiceStore.put(account, inv);
-            
-            log.info(">>>> [SYSTEM] Registered new invoice: account={}, amount={}", account, amount);
-            return ResponseEntity.ok("Invoice registered successfully: " + account + " for " + amount + " BYN");
-        } catch (Exception e) {
-            log.error("Failed to register invoice: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body("System Error: " + e.getMessage());
-        }
-    }
-
     // Use RequestMapping to support both GET and POST for "New Protocol" testing
     @RequestMapping(
         value = { "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" },
