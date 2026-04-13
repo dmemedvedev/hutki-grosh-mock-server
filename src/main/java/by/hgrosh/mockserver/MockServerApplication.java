@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.stream.Collectors;
 
 @SpringBootApplication
 public class MockServerApplication {
@@ -31,10 +31,25 @@ public class MockServerApplication {
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
                 throws IOException, ServletException {
             HttpServletRequest req = (HttpServletRequest) request;
+            HttpServletResponse res = (HttpServletResponse) response;
             
-            log.info(">>>> [SYSTEM-DIAGNOSTIC] INCOMING: {} {} from {}", 
-                req.getMethod(), req.getRequestURI(), req.getRemoteAddr());
+            String uri = req.getRequestURI();
+            String method = req.getMethod();
             
+            log.info(">>>> [SYSTEM-DIAGNOSTIC] INCOMING: {} {} from {}", method, uri, req.getRemoteAddr());
+            
+            // Universal CORS support
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+            res.setHeader("Access-Control-Allow-Headers", "*");
+            res.setHeader("Access-Control-Allow-Credentials", "true");
+
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                log.info(">>>> [SYSTEM-DIAGNOSTIC] Responding to OPTIONS pre-flight for {}", uri);
+                res.setStatus(HttpServletResponse.SC_OK);
+                return;
+            }
+
             // Log headers
             Collections.list(req.getHeaderNames()).forEach(h -> 
                 log.info(">>>> [SYSTEM-DIAGNOSTIC] Header: {} = {}", h, req.getHeader(h)));
