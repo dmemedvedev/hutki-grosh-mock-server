@@ -24,7 +24,7 @@ public class EripXmlController {
 
     // Use RequestMapping to support both GET and POST for "New Protocol" testing
     @RequestMapping(
-        value = { "/erip", "/api/erip", "/account-info", "/submit-payment", "/confirm-payment" },
+        value = { "/erip", "/api/erip", "/accountInfo", "/submitPayment", "/confirmPayment" },
         method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.HEAD, RequestMethod.OPTIONS }
     )
     public void handleEripRequest(
@@ -50,9 +50,9 @@ public class EripXmlController {
 
         String type = data.get("RequestType");
         if (type == null) {
-            if (uri.contains("account-info")) type = "ServiceInfo";
-            else if (uri.contains("submit-payment")) type = "TransactionStart";
-            else if (uri.contains("confirm-payment")) type = "TransactionResult";
+            if (uri.contains("accountInfo")) type = "ServiceInfo";
+            else if (uri.contains("submitPayment")) type = "TransactionStart";
+            else if (uri.contains("confirmPayment")) type = "TransactionResult";
             else type = "ServiceInfo";
         }
 
