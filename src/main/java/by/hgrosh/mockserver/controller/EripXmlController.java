@@ -139,11 +139,16 @@ public class EripXmlController {
         } else if ("ServiceInfo".equals(res.nextRqType) && res.parameterList != null) {
             sb.append("<ServiceInfo>");
             sb.append("<ParameterList>");
-            for (DataStore.Parameter p : res.parameterList) {
-                sb.append("<Parameter Name=\"").append(p.label).append("\" Id=\"").append(p.id).append("\">");
-                sb.append("<Type>").append(p.type).append("</Type>");
-                sb.append("<Label>").append(p.label).append("</Label>");
-                sb.append("<Required>").append(p.required ? "Y" : "N").append("</Required>");
+            for (Map<String, Object> p : res.parameterList) {
+                String id = p.get("id") != null ? p.get("id").toString() : (p.get("idx") != null ? p.get("idx").toString() : "param");
+                String label = p.get("label") != null ? p.get("label").toString() : (p.get("name") != null ? p.get("name").toString() : "Parameter");
+                String typeStr = p.get("type") != null ? p.get("type").toString() : "string";
+                boolean req = p.get("required") != null ? (Boolean)p.get("required") : false;
+
+                sb.append("<Parameter Name=\"").append(label).append("\" Id=\"").append(id).append("\">");
+                sb.append("<Type>").append(typeStr).append("</Type>");
+                sb.append("<Label>").append(label).append("</Label>");
+                sb.append("<Required>").append(req ? "Y" : "N").append("</Required>");
                 sb.append("</Parameter>");
             }
             sb.append("</ParameterList>");
