@@ -50,6 +50,7 @@ public class HutkiGroshJsonController {
         public String nextRqType = "TransactionStart";
         public String account;
         public double amount;
+        public String editable = "Y";
         public String sessionId;
         public ClientName clientName = new ClientName();
         public List<DataStore.Parameter> parameterList = new ArrayList<>();
