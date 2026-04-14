@@ -73,12 +73,14 @@ public class HutkiGroshJsonController {
     public static class SubmitPaymentResponse {
         public String responseCode = "allow";
         public long unipayTrxId;
+        public List<String> ticket = Arrays.asList("Оплата начата", "Всего хорошего");
     }
 
     @RequestMapping(value = { "/accountInfo", "/account-info" }, method = { RequestMethod.GET, RequestMethod.POST })
     public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req, 
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
-                                          @RequestParam(required = false) String account) {
+                                          @RequestParam(required = false) String account,
+                                          HttpServletRequest request) {
         
         if (req == null) {
             req = new AccountInfoRequest();
