@@ -21,7 +21,7 @@ public class HutkiGroshJsonController {
         public String account;
         public long serviceId;
         public String sessionId;
-        public List<ParameterValue> parameterList;
+        public List<Map<String, Object>> parameterList;
     }
 
     public static class ParameterValue {
@@ -52,7 +52,7 @@ public class HutkiGroshJsonController {
         public double amount;
         public String sessionId;
         public ClientName clientName = new ClientName();
-        public List<DataStore.Parameter> parameterList = new ArrayList<>();
+        public List<Map<String, Object>> parameterList = new ArrayList<>();
         public String message = null;
     }
 
@@ -77,7 +77,6 @@ public class HutkiGroshJsonController {
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
                                           @RequestParam(required = false) String account) {
         
-        // Handle both JSON body and Query Parameters (for GET tests)
         if (req == null) {
             req = new AccountInfoRequest();
             req.account = account;
@@ -87,7 +86,7 @@ public class HutkiGroshJsonController {
         }
 
         DataStore.logJson("Incoming AccountInfo: " + req.account);
-        
+
         // MD5 Verification (US_1)
         if (signature != null) {
             log.info(">>>> [SECURITY] Received signature: {}", signature);
@@ -102,48 +101,31 @@ public class HutkiGroshJsonController {
             return res;
         }
 
-        // Process incoming parameters (US_3)
-        if (req.parameterList != null) {
-            for (ParameterValue pv : req.parameterList) {
-                invoice.receivedParameters.put(pv.id, pv.value);
-                log.info(">>>> [SYSTEM] Received parameter: {} = {}", pv.id, pv.value);
-            }
-        }
-
-        // Check if we need more parameters (US_3 multi-step logic)
-        List<DataStore.Parameter> pendingParams = new ArrayList<>();
-        for (DataStore.Parameter p : invoice.requiredParameters) {
-            if (p.required && !invoice.receivedParameters.containsKey(p.id)) {
-                pendingParams.add(p);
-            }
-        }
-
-        if (!pendingParams.isEmpty()) {
-            res.nextRqType = "ServiceInfo";
-            res.parameterList = pendingParams;
-            log.info(">>>> [SYSTEM] Multi-step info gathering required for account={}", req.account);
-        } else {
-            res.nextRqType = "TransactionStart";
-        }
-
         res.account = invoice.account;
-        double amountVal = Double.parseDouble(invoice.amount);
-        res.amount = amountVal;
+        res.amount = Double.parseDouble(invoice.amount);
         res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
-        
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
 
-        if (invoice.account.equals("multistep") && !invoice.receivedParameters.containsKey("counter_reading")) {
-            DataStore.Parameter p = new DataStore.Parameter("counter_reading", "Показания счетчика", "p", true);
-            res.parameterList = Collections.singletonList(p);
-            res.nextRqType = "ServiceInfo";
-        } else if (invoice.account.equals("address_test") && !invoice.receivedParameters.containsKey("delivery_address")) {
-            DataStore.Parameter p = new DataStore.Parameter("delivery_address", "Адрес доставки", "string", true);
-            res.parameterList = Collections.singletonList(p);
-            res.nextRqType = "ServiceInfo";
+        // Process incoming Unformalized parameters from Alcosi (US_3)
+        boolean needsInput = false;
+        if (req.parameterList != null && !req.parameterList.isEmpty()) {
+            for (Map<String, Object> param : req.parameterList) {
+                Object val = param.get("value");
+                if (val == null || val.toString().trim().isEmpty()) {
+                    needsInput = true; // Value is empty, we must ask the user to fill it
+                } else {
+                    log.info(">>>> [SYSTEM] Received parameter [{}] = {}", param.get("name"), val);
+                }
+            }
+            if (needsInput) {
+                // Echo the exactly same schema back to render inputs
+                res.parameterList = req.parameterList;
+                res.nextRqType = "ServiceInfo";
+            } else {
+                res.nextRqType = "TransactionStart";
+            }
         } else {
-            res.parameterList = new ArrayList<>();
             res.nextRqType = "TransactionStart";
         }
 
