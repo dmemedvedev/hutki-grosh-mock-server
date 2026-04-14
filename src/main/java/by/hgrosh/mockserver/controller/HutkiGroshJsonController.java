@@ -130,7 +130,17 @@ public class HutkiGroshJsonController {
             }
             if (needsInput) {
                 // Echo the exactly same schema back to render inputs
-                res.parameterList = req.parameterList;
+                res.parameterList = new ArrayList<>(req.parameterList);
+                
+                // --- INJECT FAKE GARBAGE PARAMETER FOR TESTING ---
+                Map<String, Object> fakeParam = new HashMap<>();
+                fakeParam.put("idx", 99999);
+                fakeParam.put("name", "Тест недоступного параметра");
+                fakeParam.put("edit", "allow");
+                fakeParam.put("dataType", 0);
+                fakeParam.put("value", "");
+                res.parameterList.add(fakeParam);
+                // --------------------------------------------------
                 res.nextRqType = "ServiceInfo";
             } else {
                 res.nextRqType = "TransactionStart";
