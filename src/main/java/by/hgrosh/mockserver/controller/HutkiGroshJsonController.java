@@ -4,9 +4,9 @@ import by.hgrosh.mockserver.model.DataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 import java.security.MessageDigest;
 import java.util.*;
-import java.util.Locale;
 
 @RestController
 @RequestMapping(value = { "/api", "/" })
@@ -97,10 +97,15 @@ public class HutkiGroshJsonController {
 
         DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
         AccountInfoResponse res = new AccountInfoResponse();
-        
         if (invoice == null) {
             res.responseCode = "deny";
             res.message = "Счёт не найден";
+            return res;
+        }
+
+        if (!verifySignature(request)) {
+            res.responseCode = "deny";
+            res.message = "Invalid signature";
             return res;
         }
 
@@ -137,20 +142,29 @@ public class HutkiGroshJsonController {
 
     @RequestMapping(value = { "/submitPayment", "/submit-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
     public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
-                                              @RequestParam(required = false) String account) {
+                                              @RequestParam(required = false) String account,
+                                              HttpServletRequest request) {
         if (req == null) {
             req = new SubmitPaymentRequest();
             req.account = account;
         }
         log.info(">>>> [JSON] SubmitPayment for account={}", req.account);
         SubmitPaymentResponse res = new SubmitPaymentResponse();
+        
+        if (!verifySignature(request)) {
+            res.responseCode = "deny";
+            res.ticket = Arrays.asList("Ошибка верификации подписи", "Доступ запрещен");
+            return res;
+        }
+        
         res.unipayTrxId = System.currentTimeMillis() / 1000;
         return res;
     }
 
     @RequestMapping(value = { "/confirmPayment", "/confirm-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
-                                             @RequestParam(required = false) String account) {
+                                             @RequestParam(required = false) String account,
+                                             HttpServletRequest request) {
         if (req == null) {
             req = new ConfirmPaymentRequest();
             req.account = account;
@@ -158,8 +172,41 @@ public class HutkiGroshJsonController {
         }
         log.info(">>>> [JSON] ConfirmPayment for account={}, confirmed={}", req.account, req.confirmed);
         Map<String, Object> res = new HashMap<>();
+        
+        if (!verifySignature(request)) {
+            res.put("responseCode", "deny");
+            res.put("ticket", Arrays.asList("Ошибка верификации подписи", "Доступ запрещен"));
+            return res;
+        }
+        
         res.put("responseCode", "allow");
+        res.put("ticket", Arrays.asList("Оплата успешно завершена", "Спасибо!"));
         return res;
+    }
+
+    private boolean verifySignature(HttpServletRequest request) {
+        String signature = request.getHeader("X-Signature");
+        if (signature == null || signature.isEmpty()) return true;
+
+        if (request instanceof org.springframework.web.util.ContentCachingRequestWrapper wrapper) {
+            try {
+                String bodyStr = new String(wrapper.getContentAsByteArray(), wrapper.getCharacterEncoding() != null ? wrapper.getCharacterEncoding() : "UTF-8");
+                String secret = "077ad577a2b0458ea329eaf91ae01130";
+                String textToHash = bodyStr + secret;
+                String computed = calculateMd5(textToHash);
+                
+                if (signature.equalsIgnoreCase(computed)) {
+                    log.info(">>>> [SECURITY] Signature verified successfully!");
+                    return true;
+                } else {
+                    log.error(">>>> [SECURITY] Invalid signature! Expected: {}, Actual: {}", computed, signature);
+                    return false;
+                }
+            } catch (Exception e) {
+                log.error(">>>> [SECURITY] Exception verifying signature", e);
+            }
+        }
+        return true;
     }
 
     // Helper for MD5 (US_1)
