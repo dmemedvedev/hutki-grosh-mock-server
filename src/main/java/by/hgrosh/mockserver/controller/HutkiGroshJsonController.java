@@ -134,8 +134,12 @@ public class HutkiGroshJsonController {
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
 
-        if (invoice.account.equals("multistep")) {
+        if (invoice.account.equals("multistep") && !invoice.receivedParameters.containsKey("counter_reading")) {
             DataStore.Parameter p = new DataStore.Parameter("counter_reading", "Показания счетчика", "p", true);
+            res.parameterList = Collections.singletonList(p);
+            res.nextRqType = "ServiceInfo";
+        } else if (invoice.account.equals("address_test") && !invoice.receivedParameters.containsKey("delivery_address")) {
+            DataStore.Parameter p = new DataStore.Parameter("delivery_address", "Адрес доставки", "string", true);
             res.parameterList = Collections.singletonList(p);
             res.nextRqType = "ServiceInfo";
         } else {
