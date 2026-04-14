@@ -82,10 +82,10 @@ public class EripXmlController {
                 if (!eripParams.isEmpty()) {
                     jsonReq.parameterList = new ArrayList<>();
                     for (Map.Entry<String, String> entry : eripParams.entrySet()) {
-                        HutkiGroshJsonController.ParameterValue pv = new HutkiGroshJsonController.ParameterValue();
-                        pv.id = entry.getKey();
-                        pv.value = entry.getValue();
-                        jsonReq.parameterList.add(pv);
+                        Map<String, Object> paramMap = new HashMap<>();
+                        paramMap.put("id", entry.getKey());
+                        paramMap.put("value", entry.getValue());
+                        jsonReq.parameterList.add(paramMap);
                     }
                 }
 
