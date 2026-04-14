@@ -187,6 +187,8 @@ public class HutkiGroshJsonController {
     }
 
     private boolean verifySignature(HttpServletRequest request) {
+        if (request == null) return true;
+        
         String signature = request.getHeader("X-Signature");
         if (signature == null || signature.isEmpty()) return true;
 
