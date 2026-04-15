@@ -162,6 +162,13 @@ public class HutkiGroshJsonController {
             return res;
         }
         
+        if ("error".equalsIgnoreCase(req.account)) {
+            log.info(">>>> [JSON] Fake backend failure triggered for account 'error'");
+            res.responseCode = "deny";
+            res.ticket = Arrays.asList("Оплата отклонена", "Сбой банка/провайдера (тестовая ошибка)");
+            return res;
+        }
+        
         long eripTrxId = (req.transactionId != null) ? req.transactionId : (System.currentTimeMillis() % 100000);
         if (trxCache.containsKey(eripTrxId)) {
              res.unipayTrxId = trxCache.get(eripTrxId);
