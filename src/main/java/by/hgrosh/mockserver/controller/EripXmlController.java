@@ -97,6 +97,9 @@ public class EripXmlController {
                 jsonReq.type = "submitPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
+                if (transactionId != null && !transactionId.isEmpty()) {
+                    try { jsonReq.transactionId = Long.parseLong(transactionId); } catch(Exception e) {}
+                }
 
                 HutkiGroshJsonController.SubmitPaymentResponse jsonRes = jsonController.submitPayment(jsonReq, account, null);
                 outXml = buildTransactionStartResponse(jsonRes, requestId, transactionId);

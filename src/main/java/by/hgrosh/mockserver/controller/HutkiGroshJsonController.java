@@ -14,6 +14,7 @@ import java.util.*;
 public class HutkiGroshJsonController {
 
     private static final Logger log = LoggerFactory.getLogger(HutkiGroshJsonController.class);
+    private static final Map<Long, Long> trxCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     // DTO for incoming requests
     public static class AccountInfoRequest {
@@ -34,6 +35,7 @@ public class HutkiGroshJsonController {
         public String account;
         public long serviceId;
         public double amount;
+        public Long transactionId;
     }
 
     public static class ConfirmPaymentRequest {
@@ -159,7 +161,16 @@ public class HutkiGroshJsonController {
             return res;
         }
         
-        res.unipayTrxId = System.currentTimeMillis() / 1000;
+        long eripTrxId = (req.transactionId != null) ? req.transactionId : (System.currentTimeMillis() % 100000);
+        if (trxCache.containsKey(eripTrxId)) {
+             res.unipayTrxId = trxCache.get(eripTrxId);
+             log.info(">>>> [IDEMPOTENCY] Returned cached unipayTrxId={} for transactionId={}", res.unipayTrxId, eripTrxId);
+        } else {
+             res.unipayTrxId = System.currentTimeMillis() / 1000;
+             trxCache.put(eripTrxId, res.unipayTrxId);
+             log.info(">>>> [IDEMPOTENCY] Generated new unipayTrxId={} for transactionId={}", res.unipayTrxId, eripTrxId);
+        }
+        
         return res;
     }
 
