@@ -57,6 +57,7 @@ public class HutkiGroshJsonController {
         public ClientName clientName = new ClientName();
         public List<Map<String, Object>> parameterList = new ArrayList<>();
         public String message = null;
+        public List<String> ticket = Arrays.asList("Счет найден", "Ожидание оплаты"); // Added per ALCOSI dev comments
     }
 
     public static class ClientName {
@@ -73,7 +74,7 @@ public class HutkiGroshJsonController {
     public static class SubmitPaymentResponse {
         public String responseCode = "allow";
         public long unipayTrxId;
-        public List<String> ticket = Arrays.asList("Оплата начата", "Всего хорошего");
+        public List<String> ticket = Arrays.asList("Оплата начата", "Проверьте данные");
     }
 
     @RequestMapping(value = { "/accountInfo", "/account-info" }, method = { RequestMethod.GET, RequestMethod.POST })
