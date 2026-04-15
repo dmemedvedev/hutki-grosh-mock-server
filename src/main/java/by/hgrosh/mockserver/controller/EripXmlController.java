@@ -109,7 +109,14 @@ public class EripXmlController {
                 jsonReq.type = "confirmPayment";
                 jsonReq.account = account;
                 jsonReq.serviceId = Long.parseLong(serviceNo);
-                jsonReq.confirmed = true;
+                
+                String statusMsg = data.get("Status");
+                if ("2".equals(statusMsg) || "3".equals(statusMsg) || "Canceled".equalsIgnoreCase(statusMsg)) {
+                     jsonReq.confirmed = false;
+                     jsonReq.errorText = data.getOrDefault("StatusDescription", "Отказ со стороны ЕРИП");
+                } else {
+                     jsonReq.confirmed = true;
+                }
                 
                 String trxIdStr = data.getOrDefault("ServiceProvider_TrxId", "0");
                 jsonReq.unipayTrxId = Long.parseLong(trxIdStr);
@@ -213,7 +220,7 @@ public class EripXmlController {
             org.xml.sax.InputSource is = new org.xml.sax.InputSource(new java.io.StringReader(xml));
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(is);
             
-            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId", "TransactionId" };
+            String[] tags = { "RequestType", "PersonalAccount", "ServiceNo", "RequestId", "Amount", "ServiceProvider_TrxId", "TransactionId", "Status", "StatusDescription" };
             for (String tag : tags) {
                 org.w3c.dom.NodeList nodes = doc.getElementsByTagName(tag);
                 if (nodes.getLength() > 0) {

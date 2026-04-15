@@ -42,8 +42,9 @@ public class HutkiGroshJsonController {
         public String type;
         public String account;
         public long serviceId;
-        public boolean confirmed;
+        public boolean confirmed = true;
         public long unipayTrxId;
+        public String errorText;
     }
 
     // DTO for responses
@@ -193,7 +194,13 @@ public class HutkiGroshJsonController {
         }
         
         res.put("responseCode", "allow");
-        res.put("ticket", Arrays.asList("Оплата успешно завершена", "Спасибо!"));
+        if (!req.confirmed) {
+            log.info(">>>> [JSON] Payment CANCELLED by ALCOSI/ERIP. Reason: {}", req.errorText);
+            res.put("ticket", Arrays.asList("Оплата отменена", (req.errorText != null ? req.errorText : "Неизвестная причина отмены")));
+        } else {
+            res.put("ticket", Arrays.asList("Оплата успешно завершена", "Спасибо!"));
+        }
+        
         return res;
     }
 
