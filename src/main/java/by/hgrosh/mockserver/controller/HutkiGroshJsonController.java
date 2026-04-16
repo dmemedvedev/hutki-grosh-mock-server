@@ -134,10 +134,9 @@ public class HutkiGroshJsonController {
                 // Разрешаем редактирование параметра "Дата доставки"
                 Object nameObj = param.get("name");
                 if (nameObj != null && "Дата доставки".equalsIgnoreCase(nameObj.toString())) {
-                    param.put("edit", 1); // 1 = editable
-                    param.put("isEditable", true);
+                    param.put("edit", "allow"); // Строковый тип по версии Платежного Дерева ALCOSI
                     param.put("editable", true);
-                    log.info(">>>> [SYSTEM] Marking 'Дата доставки' as EDITABLE.");
+                    log.info(">>>> [SYSTEM] Marking 'Дата доставки' as EDITABLE (edit='allow').");
                 }
             }
             if (needsInput) {
