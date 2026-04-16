@@ -131,12 +131,14 @@ public class HutkiGroshJsonController {
                     log.info(">>>> [SYSTEM] Received parameter [{}] = {}", param.get("name"), val);
                 }
                 
-                // Разрешаем редактирование параметра "Дата доставки"
+                // Принудительно разрешаем редактирование ВСЕХ неформализованных параметров
+                // (ALCOSI по умолчанию блокирует некоторые новые параметры, присылая edit: 'deny')
+                param.put("edit", "allow"); 
+                param.put("editable", true);
+                
                 Object nameObj = param.get("name");
-                if (nameObj != null && "Дата доставки".equalsIgnoreCase(nameObj.toString())) {
-                    param.put("edit", "allow"); // Строковый тип по версии Платежного Дерева ALCOSI
-                    param.put("editable", true);
-                    log.info(">>>> [SYSTEM] Marking 'Дата доставки' as EDITABLE (edit='allow').");
+                if (nameObj != null) {
+                    log.info(">>>> [SYSTEM] Marked parameter '{}' as EDITABLE (edit='allow').", nameObj);
                 }
             }
             if (needsInput) {
