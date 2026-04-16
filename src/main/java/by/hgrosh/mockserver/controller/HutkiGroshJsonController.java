@@ -131,13 +131,13 @@ public class HutkiGroshJsonController {
                     log.info(">>>> [SYSTEM] Received parameter [{}] = {}", param.get("name"), val);
                 }
                 
-                // Запрещаем редактирование параметра "Дата доставки"
+                // Разрешаем редактирование параметра "Дата доставки"
                 Object nameObj = param.get("name");
                 if (nameObj != null && "Дата доставки".equalsIgnoreCase(nameObj.toString())) {
-                    param.put("edit", 0); // По протоколам Хутки Грош/ЕРИП (0 = readonly)
-                    param.put("isEditable", false);
-                    param.put("editable", false);
-                    log.info(">>>> [SYSTEM] Marking 'Дата доставки' as NOT editable.");
+                    param.put("edit", 1); // 1 = editable
+                    param.put("isEditable", true);
+                    param.put("editable", true);
+                    log.info(">>>> [SYSTEM] Marking 'Дата доставки' as EDITABLE.");
                 }
             }
             if (needsInput) {
