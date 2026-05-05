@@ -103,9 +103,11 @@ public class HutkiGroshJsonController {
         DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
         AccountInfoResponse res = new AccountInfoResponse();
         if (invoice == null) {
-            res.responseCode = "deny";
-            res.message = "Счёт не найден";
-            return res;
+            // Auto-generate invoice for load testing
+            String autoAccount = (req.account != null && !req.account.isEmpty()) ? req.account : "auto-" + (System.currentTimeMillis() % 100000);
+            log.info(">>>> [LOAD TEST] Auto-generating invoice for missing account: {}", autoAccount);
+            invoice = new DataStore.Invoice(autoAccount, "10.00", "LoadTestSurname", "LoadTestName");
+            DataStore.invoiceStore.put(autoAccount, invoice);
         }
 
         if (!verifySignature(request)) {
