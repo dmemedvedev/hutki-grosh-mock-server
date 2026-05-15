@@ -123,32 +123,45 @@ public class HutkiGroshJsonController {
         res.clientName.surName = invoice.surname;
 
         // Process incoming Unformalized parameters from Alcosi (US_3)
+        // Сценарий 2 многошаговой оплаты:
+        //   - На первый accountInfo с пустыми allow-параметрами мок отвечает
+        //     nextRqType=ServiceInfo, запрашивая ввод у плательщика.
+        //   - Для deny-параметров значения подставляет сам ПУ.
+        //   - Когда все allow-параметры заполнены, переходим в TransactionStart.
         boolean needsInput = false;
         if (req.parameterList != null && !req.parameterList.isEmpty()) {
             for (Map<String, Object> param : req.parameterList) {
-                Object val = param.get("value");
-
-                if (val == null || val.toString().trim().isEmpty()) {
-
-                } else {
-                    log.info(">>>> [SYSTEM] Received parameter [{}] = {}", param.get("name"), val);
-                }
-
                 Object editFlag = param.get("edit");
-                if (!"deny".equals(editFlag)) {
-                    param.put("edit", "allow"); 
-                    param.put("editable", true);
-                }
-                
+                Object val = param.get("value");
                 Object nameObj = param.get("name");
+                boolean isEditable = "allow".equals(editFlag);
+                boolean isEmpty = (val == null || val.toString().trim().isEmpty());
+
+                // Требуем ввод только для редактируемых параметров с пустым значением
+                if (isEditable && isEmpty) {
+                    needsInput = true;
+                } else if (!isEmpty) {
+                    log.info(">>>> [SYSTEM] Received parameter [{}] = {}", nameObj, val);
+                }
+
+                // Для deny-параметров мок (как ПУ) подставляет значение со своей стороны
+                if ("deny".equals(editFlag) && isEmpty) {
+                    String mockValue = generateMockValue(String.valueOf(nameObj));
+                    param.put("value", mockValue);
+                    log.info(">>>> [SYSTEM] Mock auto-filled deny parameter '{}' = '{}'", nameObj, mockValue);
+                }
+
                 if (nameObj != null) {
                     log.info(">>>> [SYSTEM] Processed parameter '{}', edit='{}'.", nameObj, param.get("edit"));
                 }
             }
             if (needsInput) {
-                // Echo the exactly same schema back to render inputs
+                // Возвращаем те же параметры обратно: allow остаются пустыми (для ввода),
+                // deny уже заполнены значениями ПУ.
                 res.parameterList = req.parameterList;
                 res.nextRqType = "ServiceInfo";
+                res.amount = 0.0;       // на шаге ServiceInfo итоговой суммы ещё нет
+                res.editable = false;
             } else {
                 res.nextRqType = "TransactionStart";
             }
@@ -199,7 +212,7 @@ public class HutkiGroshJsonController {
     @RequestMapping(value = { "/confirmPayment", "/confirm-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
                                              @RequestParam(required = false) String account,
-                                             HttpServletRequest request) {
+                                              HttpServletRequest request) {
         if (req == null) {
             req = new ConfirmPaymentRequest();
             req.account = account;
@@ -250,6 +263,16 @@ public class HutkiGroshJsonController {
             }
         }
         return true;
+    }
+
+    // Подстановка mock-значений для deny-параметров (US_3, Сценарий 2)
+    private String generateMockValue(String paramName) {
+        if (paramName == null) return "mock-value";
+        String n = paramName.toLowerCase();
+        if (n.contains("вес")) return "1.5";
+        if (n.contains("дата")) return "20.05.2026";
+        if (n.contains("тип")) return "Курьер";
+        return "mock-value";
     }
 
     // Helper for MD5 (US_1)
