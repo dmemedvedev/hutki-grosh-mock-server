@@ -127,18 +127,13 @@ public class HutkiGroshJsonController {
         if (req.parameterList != null && !req.parameterList.isEmpty()) {
             for (Map<String, Object> param : req.parameterList) {
                 Object val = param.get("value");
-                // Ошибка при оплате возникает из-за того, что мы блокируем платеж и просим ALCOSI 
-                // заполнить параметры (nextRqType = ServiceInfo). 
-                // Для новой услуги эти параметры, скорее всего, опциональные.
+
                 if (val == null || val.toString().trim().isEmpty()) {
-                    // needsInput = true; // ЗАКОММЕНТИРОВАНО: не требуем ввода, пропускаем в TransactionStart
+
                 } else {
                     log.info(">>>> [SYSTEM] Received parameter [{}] = {}", param.get("name"), val);
                 }
-                
-                // Принудительно разрешаем редактирование ВСЕХ неформализованных параметров
-                // (ALCOSI по умолчанию блокирует некоторые новые параметры, присылая edit: 'deny')
-                // Оставляем только для тех полей, которые не deny (чтобы не сломать "Код из смс")
+
                 Object editFlag = param.get("edit");
                 if (!"deny".equals(editFlag)) {
                     param.put("edit", "allow"); 
