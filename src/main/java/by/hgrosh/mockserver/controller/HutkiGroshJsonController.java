@@ -115,13 +115,21 @@ public class HutkiGroshJsonController {
     @RequestMapping(value = { "/accountInfo", "/account-info",
                               "/sandbox/accountInfo", "/sandbox/account-info",
                               "/sandbox-allow/accountInfo", "/sandbox-allow/account-info",
-                              "/sandbox-signed/accountInfo", "/sandbox-signed/account-info" },
+                              "/sandbox-signed/accountInfo", "/sandbox-signed/account-info",
+                              "/sandbox-down/accountInfo", "/sandbox-down/account-info",
+                              "/sandbox-hang/accountInfo", "/sandbox-hang/account-info" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req,
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
                                           @RequestParam(required = false) String account,
                                           HttpServletRequest request) {
         String profile = profileOf(request);
+
+        // SANDBOX-DOWN: always fail with HTTP 500 (тест "ПУ упал").
+        if ("SANDBOX-DOWN".equals(profile)) {
+            simulateProvFailure(profile, "accountInfo");
+        }
+        // SANDBOX-HANG on accountInfo: пропускаем, чтобы дойти до submitPayment.
 
         if (req == null) {
             req = new AccountInfoRequest();
@@ -289,12 +297,20 @@ public class HutkiGroshJsonController {
     @RequestMapping(value = { "/submitPayment", "/submit-payment",
                               "/sandbox/submitPayment", "/sandbox/submit-payment",
                               "/sandbox-allow/submitPayment", "/sandbox-allow/submit-payment",
-                              "/sandbox-signed/submitPayment", "/sandbox-signed/submit-payment" },
+                              "/sandbox-signed/submitPayment", "/sandbox-signed/submit-payment",
+                              "/sandbox-down/submitPayment", "/sandbox-down/submit-payment",
+                              "/sandbox-hang/submitPayment", "/sandbox-hang/submit-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
                                               @RequestParam(required = false) String account,
                                               HttpServletRequest request) {
         String profile = profileOf(request);
+
+        if ("SANDBOX-DOWN".equals(profile)) {
+            simulateProvFailure(profile, "submitPayment");
+        }
+        // SANDBOX-HANG on submitPayment: пропускаем, чтобы заявка дошла до confirmPayment.
+
         if (req == null) {
             req = new SubmitPaymentRequest();
             req.account = account;
@@ -335,12 +351,25 @@ public class HutkiGroshJsonController {
     @RequestMapping(value = { "/confirmPayment", "/confirm-payment",
                               "/sandbox/confirmPayment", "/sandbox/confirm-payment",
                               "/sandbox-allow/confirmPayment", "/sandbox-allow/confirm-payment",
-                              "/sandbox-signed/confirmPayment", "/sandbox-signed/confirm-payment" },
+                              "/sandbox-signed/confirmPayment", "/sandbox-signed/confirm-payment",
+                              "/sandbox-down/confirmPayment", "/sandbox-down/confirm-payment",
+                              "/sandbox-hang/confirmPayment", "/sandbox-hang/confirm-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
                                              @RequestParam(required = false) String account,
                                               HttpServletRequest request) {
         String profile = profileOf(request);
+
+        if ("SANDBOX-DOWN".equals(profile)) {
+            simulateProvFailure(profile, "confirmPayment");
+        }
+        // SANDBOX-HANG on confirmPayment: спим 15 сек, чтобы НХГ улетел в таймаут
+        // и оставил транзакцию в "submitted-but-not-confirmed" состоянии — это
+        // предусловие для теста 210-го файла сверки.
+        if ("SANDBOX-HANG".equals(profile)) {
+            simulateProvHang(profile, "confirmPayment");
+        }
+
         if (req == null) {
             req = new ConfirmPaymentRequest();
             req.account = account;
@@ -370,10 +399,30 @@ public class HutkiGroshJsonController {
         if (request == null) return "PROD";
         String uri = request.getRequestURI();
         if (uri == null) return "PROD";
+        // Check longer/more-specific prefixes first.
+        if (uri.contains("/sandbox-down")) return "SANDBOX-DOWN";
+        if (uri.contains("/sandbox-hang")) return "SANDBOX-HANG";
         if (uri.contains("/sandbox-signed")) return "SANDBOX-SIGNED";
         if (uri.contains("/sandbox-allow")) return "SANDBOX-ALLOW";
         if (uri.contains("/sandbox")) return "SANDBOX";
         return "PROD";
+    }
+
+    private void simulateProvFailure(String profile, String stage) {
+        log.warn(">>>> [{}] Simulating ПУ failure on {} (returning HTTP 500)", profile, stage);
+        throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                "Simulated ПУ failure (mock test endpoint)");
+    }
+
+    private void simulateProvHang(String profile, String stage) {
+        log.warn(">>>> [{}] Simulating ПУ hang on {} (sleeping 15s)", profile, stage);
+        try {
+            Thread.sleep(15_000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        log.warn(">>>> [{}] Sleep done on {} — НХГ likely already timed out", profile, stage);
     }
 
     private boolean verifySignature(HttpServletRequest request) {
@@ -381,7 +430,8 @@ public class HutkiGroshJsonController {
 
         String profile = profileOf(request);
         boolean isSandbox = "SANDBOX".equals(profile) || "SANDBOX-ALLOW".equals(profile)
-                || "SANDBOX-SIGNED".equals(profile);
+                || "SANDBOX-SIGNED".equals(profile) || "SANDBOX-DOWN".equals(profile)
+                || "SANDBOX-HANG".equals(profile);
         String secret;
         String headerKey;
         if ("SANDBOX-SIGNED".equals(profile)) {
