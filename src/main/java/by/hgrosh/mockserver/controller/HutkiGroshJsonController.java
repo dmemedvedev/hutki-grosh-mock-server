@@ -25,6 +25,10 @@ public class HutkiGroshJsonController {
     private String sandboxSecret;
     @Value("${mock.sandbox.headerKey:X-Signature}")
     private String sandboxHeaderKey;
+    @Value("${mock.sandbox.forceAllowAllParams:false}")
+    private boolean sandboxForceAllowAllParams;
+    @Value("${mock.prod.forceAllowAllParams:false}")
+    private boolean prodForceAllowAllParams;
 
     // DTO for incoming requests
     public static class AccountInfoRequest {
@@ -114,8 +118,18 @@ public class HutkiGroshJsonController {
             log.info(">>>> [{}][SECURITY] Received signature: {}", profile, signature);
         }
 
-        DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
         AccountInfoResponse res = new AccountInfoResponse();
+
+        // API v1.1 Сценарий 3: отказ по несуществующему/заблокированному счёту.
+        if ("0000000".equals(req.account)) {
+            res.responseCode = "deny";
+            res.nextRqType = null;
+            res.message = "Лицевой счет " + req.account + " не найден.";
+            log.info(">>>> [{}] AccountInfo DENY for account={}", profile, req.account);
+            return res;
+        }
+
+        DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
         if (invoice == null) {
             // Auto-generate invoice for load testing
             String autoAccount = (req.account != null && !req.account.isEmpty()) ? req.account : "auto-" + (System.currentTimeMillis() % 100000);
@@ -136,6 +150,10 @@ public class HutkiGroshJsonController {
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
 
+        // Force-allow тестовый режим: перезаписываем edit=allow для всех параметров,
+        // чтобы проверить как кабинет отрисует ввод всех полей плательщиком.
+        boolean forceAllowAllParams = "SANDBOX".equals(profile) ? sandboxForceAllowAllParams : prodForceAllowAllParams;
+
         // Process incoming Unformalized parameters from Alcosi (US_3)
         // Сценарий 2 многошаговой оплаты:
         //   - На первый accountInfo с пустыми allow-параметрами мок отвечает
@@ -151,25 +169,44 @@ public class HutkiGroshJsonController {
                 boolean isEditable = "allow".equals(editFlag);
                 boolean isEmpty = (val == null || val.toString().trim().isEmpty());
 
-                // Требуем ввод только для редактируемых параметров с пустым значением
-                if (isEditable && isEmpty) {
-                    needsInput = true;
-                } else if (!isEmpty) {
-                    log.info(">>>> [SYSTEM] Received parameter [{}] = {}", nameObj, val);
-                }
+                if (forceAllowAllParams) {
+                    // В тестовом режиме все параметры считаем редактируемыми плательщиком.
+                    if (isEmpty) {
+                        needsInput = true;
+                    } else {
+                        log.info(">>>> [{}][SYSTEM] Received parameter [{}] = {}", profile, nameObj, val);
+                    }
+                } else {
+                    // Требуем ввод только для редактируемых параметров с пустым значением
+                    if (isEditable && isEmpty) {
+                        needsInput = true;
+                    } else if (!isEmpty) {
+                        log.info(">>>> [SYSTEM] Received parameter [{}] = {}", nameObj, val);
+                    }
 
-                // Для deny-параметров мок (как ПУ) подставляет значение со своей стороны
-                if ("deny".equals(editFlag) && isEmpty) {
-                    String mockValue = generateMockValue(String.valueOf(nameObj));
-                    param.put("value", mockValue);
-                    log.info(">>>> [SYSTEM] Mock auto-filled deny parameter '{}' = '{}'", nameObj, mockValue);
+                    // Для deny-параметров мок (как ПУ) подставляет значение со своей стороны
+                    if ("deny".equals(editFlag) && isEmpty) {
+                        String mockValue = generateMockValue(String.valueOf(nameObj));
+                        param.put("value", mockValue);
+                        log.info(">>>> [SYSTEM] Mock auto-filled deny parameter '{}' = '{}'", nameObj, mockValue);
+                    }
                 }
 
                 if (nameObj != null) {
-                    log.info(">>>> [SYSTEM] Processed parameter '{}', edit='{}'.", nameObj, param.get("edit"));
+                    log.info(">>>> [{}][SYSTEM] Processed parameter '{}', edit='{}'.", profile, nameObj, param.get("edit"));
                 }
             }
             if (needsInput) {
+                if (forceAllowAllParams) {
+                    // Все параметры -> edit=allow и пустое значение, чтобы кабинет
+                    // отрисовал ввод для каждого из них.
+                    for (Map<String, Object> param : req.parameterList) {
+                        param.put("edit", "allow");
+                        param.put("value", "");
+                    }
+                    log.info(">>>> [{}][SYSTEM] force-allow-all-params: overriding {} params to edit=allow",
+                            profile, req.parameterList.size());
+                }
                 // Возвращаем те же параметры обратно: allow остаются пустыми (для ввода),
                 // deny уже заполнены значениями ПУ.
                 res.parameterList = req.parameterList;
