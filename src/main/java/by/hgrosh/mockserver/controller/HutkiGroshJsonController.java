@@ -94,7 +94,8 @@ public class HutkiGroshJsonController {
     }
 
     @RequestMapping(value = { "/accountInfo", "/account-info",
-                              "/sandbox/accountInfo", "/sandbox/account-info" },
+                              "/sandbox/accountInfo", "/sandbox/account-info",
+                              "/sandbox-allow/accountInfo", "/sandbox-allow/account-info" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req,
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
@@ -152,7 +153,9 @@ public class HutkiGroshJsonController {
 
         // Force-allow тестовый режим: перезаписываем edit=allow для всех параметров,
         // чтобы проверить как кабинет отрисует ввод всех полей плательщиком.
-        boolean forceAllowAllParams = "SANDBOX".equals(profile) ? sandboxForceAllowAllParams : prodForceAllowAllParams;
+        // Включается префиксом /sandbox-allow либо env var на профиле.
+        boolean forceAllowAllParams = "SANDBOX-ALLOW".equals(profile)
+                || ("SANDBOX".equals(profile) ? sandboxForceAllowAllParams : prodForceAllowAllParams);
 
         // Process incoming Unformalized parameters from Alcosi (US_3)
         // Сценарий 2 многошаговой оплаты:
@@ -224,7 +227,8 @@ public class HutkiGroshJsonController {
     }
 
     @RequestMapping(value = { "/submitPayment", "/submit-payment",
-                              "/sandbox/submitPayment", "/sandbox/submit-payment" },
+                              "/sandbox/submitPayment", "/sandbox/submit-payment",
+                              "/sandbox-allow/submitPayment", "/sandbox-allow/submit-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
                                               @RequestParam(required = false) String account,
@@ -264,7 +268,8 @@ public class HutkiGroshJsonController {
     }
 
     @RequestMapping(value = { "/confirmPayment", "/confirm-payment",
-                              "/sandbox/confirmPayment", "/sandbox/confirm-payment" },
+                              "/sandbox/confirmPayment", "/sandbox/confirm-payment",
+                              "/sandbox-allow/confirmPayment", "/sandbox-allow/confirm-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
                                              @RequestParam(required = false) String account,
@@ -298,15 +303,19 @@ public class HutkiGroshJsonController {
     private String profileOf(HttpServletRequest request) {
         if (request == null) return "PROD";
         String uri = request.getRequestURI();
-        return (uri != null && uri.contains("/sandbox")) ? "SANDBOX" : "PROD";
+        if (uri == null) return "PROD";
+        if (uri.contains("/sandbox-allow")) return "SANDBOX-ALLOW";
+        if (uri.contains("/sandbox")) return "SANDBOX";
+        return "PROD";
     }
 
     private boolean verifySignature(HttpServletRequest request) {
         if (request == null) return true;
 
         String profile = profileOf(request);
-        String secret = "SANDBOX".equals(profile) ? sandboxSecret : prodSecret;
-        String headerKey = "SANDBOX".equals(profile) ? sandboxHeaderKey : prodHeaderKey;
+        boolean isSandbox = "SANDBOX".equals(profile) || "SANDBOX-ALLOW".equals(profile);
+        String secret = isSandbox ? sandboxSecret : prodSecret;
+        String headerKey = isSandbox ? sandboxHeaderKey : prodHeaderKey;
         if (headerKey == null || headerKey.isEmpty()) headerKey = "X-Signature";
 
         String signature = request.getHeader(headerKey);
