@@ -73,6 +73,7 @@ public class HutkiGroshJsonController {
         public String sessionId;
         public ClientName clientName = new ClientName();
         public List<Map<String, Object>> parameterList = new ArrayList<>();
+        public List<String> ticket = null;
         public String message = null;
     }
 
@@ -125,6 +126,10 @@ public class HutkiGroshJsonController {
         if ("0000000".equals(req.account)) {
             res.responseCode = "deny";
             res.nextRqType = null;
+            res.sessionId = req.sessionId;
+            res.ticket = Arrays.asList(
+                    "Ошибка: Лицевой счет " + req.account + " не найден.",
+                    "Проверьте правильность ввода или обратитесь в поддержку.");
             res.message = "Лицевой счет " + req.account + " не найден.";
             log.info(">>>> [{}] AccountInfo DENY for account={}", profile, req.account);
             return res;
