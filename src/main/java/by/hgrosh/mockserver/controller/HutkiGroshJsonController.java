@@ -166,6 +166,19 @@ public class HutkiGroshJsonController {
 
         if (!verifySignature(request)) {
             res.responseCode = "deny";
+            res.nextRqType = null;
+            res.sessionId = req.sessionId;
+            res.account = null;
+            res.amount = null;
+            res.editable = null;
+            res.minAmount = null;
+            res.maxAmount = null;
+            res.clientName = null;
+            res.parameterList = null;
+            res.ticket = Arrays.asList(
+                    "Ошибка проверки подписи запроса.",
+                    "Проверьте секретную фразу и ключ HTTP-заголовка.");
+            res.errorText = "Invalid signature";
             res.message = "Invalid signature";
             return res;
         }
