@@ -225,6 +225,13 @@ public class HutkiGroshJsonController {
         boolean forceAllowAllParams = "SANDBOX-ALLOW".equals(profile)
                 || ("SANDBOX".equals(profile) ? sandboxForceAllowAllParams : prodForceAllowAllParams);
 
+        // Magic account "loop*": всегда возвращаем nextRqType=ServiceInfo
+        // (с пустыми allow-параметрами), даже на втором вызове accountInfo.
+        // По API v1.1 ПУ обязан перейти к TransactionStart на второй итерации;
+        // здесь намеренно нарушаем — чтобы проверить, как кабинет НХГ
+        // обрабатывает попытку зациклить парам-ввод.
+        boolean forceLoop = req.account != null && req.account.toLowerCase().startsWith("loop");
+
         // Process incoming Unformalized parameters from Alcosi (US_3)
         // Сценарий 2 многошаговой оплаты:
         //   - На первый accountInfo с пустыми allow-параметрами мок отвечает
@@ -267,6 +274,16 @@ public class HutkiGroshJsonController {
                     log.info(">>>> [{}][SYSTEM] Processed parameter '{}', edit='{}'.", profile, nameObj, param.get("edit"));
                 }
             }
+            if (forceLoop) {
+                // Принудительно зацикливаем: каждый параметр снова просит ввод.
+                for (Map<String, Object> param : req.parameterList) {
+                    param.put("edit", "allow");
+                    param.put("value", "");
+                }
+                needsInput = true;
+                log.info(">>>> [{}][SYSTEM] forceLoop: возвращаем ServiceInfo на iteration accountInfo account={}",
+                        profile, req.account);
+            }
             if (needsInput) {
                 if (forceAllowAllParams) {
                     // Все параметры -> edit=allow и пустое значение, чтобы кабинет
@@ -287,6 +304,20 @@ public class HutkiGroshJsonController {
             } else {
                 res.nextRqType = "TransactionStart";
             }
+        } else if (forceLoop) {
+            // На самом первом запросе с пустым parameterList тоже просим ввод —
+            // создадим один синтетический параметр чтобы было что зацикливать.
+            Map<String, Object> p = new HashMap<>();
+            p.put("idx", 304);
+            p.put("name", "Loop-параметр");
+            p.put("edit", "allow");
+            p.put("dataType", 0);
+            p.put("value", "");
+            res.parameterList = new ArrayList<>(List.of(p));
+            res.nextRqType = "ServiceInfo";
+            res.amount = 0.0;
+            res.editable = false;
+            log.info(">>>> [{}][SYSTEM] forceLoop: returning synthetic param for account={}", profile, req.account);
         } else {
             res.nextRqType = "TransactionStart";
         }
