@@ -62,19 +62,21 @@ public class HutkiGroshJsonController {
     }
 
     // DTO for responses
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public static class AccountInfoResponse {
         public String responseCode = "allow";
         public String nextRqType = "TransactionStart";
         public String account;
-        public double amount;
-        public boolean editable = true;
-        public double minAmount = 1.00;
-        public double maxAmount = 10000.00;
+        public Double amount;
+        public Boolean editable = true;
+        public Double minAmount = 1.00;
+        public Double maxAmount = 10000.00;
         public String sessionId;
         public ClientName clientName = new ClientName();
         public List<Map<String, Object>> parameterList = new ArrayList<>();
         public List<String> ticket = null;
         public String message = null;
+        public String errorText = null;
     }
 
     public static class ClientName {
@@ -123,14 +125,23 @@ public class HutkiGroshJsonController {
         AccountInfoResponse res = new AccountInfoResponse();
 
         // API v1.1 Сценарий 3: отказ по несуществующему/заблокированному счёту.
+        // Чтобы кабинет показал текст из ticket, ответ должен быть минимальным —
+        // зануляем все опциональные поля, чтобы @JsonInclude(NON_NULL) их выкинул.
         if ("0000000".equals(req.account)) {
             res.responseCode = "deny";
             res.nextRqType = null;
             res.sessionId = req.sessionId;
+            res.account = null;
+            res.amount = null;
+            res.editable = null;
+            res.minAmount = null;
+            res.maxAmount = null;
+            res.clientName = null;
+            res.parameterList = null;
             res.ticket = Arrays.asList(
                     "Ошибка: Лицевой счет " + req.account + " не найден.",
                     "Проверьте правильность ввода или обратитесь в поддержку.");
-            res.message = "Лицевой счет " + req.account + " не найден.";
+            res.errorText = "Лицевой счет " + req.account + " не найден.";
             log.info(">>>> [{}] AccountInfo DENY for account={}", profile, req.account);
             return res;
         }
