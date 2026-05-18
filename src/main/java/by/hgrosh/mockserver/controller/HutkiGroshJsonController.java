@@ -90,10 +90,12 @@ public class HutkiGroshJsonController {
         public String house = "";
     }
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public static class SubmitPaymentResponse {
         public String responseCode = "allow";
-        public long unipayTrxId;
+        public Long unipayTrxId;
         public List<String> ticket = Arrays.asList("Оплата начата", "Всего хорошего");
+        public String errorText = null;
     }
 
     @RequestMapping(value = { "/accountInfo", "/account-info",
@@ -259,14 +261,18 @@ public class HutkiGroshJsonController {
         
         if (!verifySignature(request)) {
             res.responseCode = "deny";
+            res.unipayTrxId = null;
             res.ticket = Arrays.asList("Ошибка верификации подписи", "Доступ запрещен");
+            res.errorText = "Invalid signature";
             return res;
         }
-        
+
         if ("error".equalsIgnoreCase(req.account)) {
-            log.info(">>>> [JSON] Fake backend failure triggered for account 'error'");
+            log.info(">>>> [{}][JSON] Fake backend failure triggered for account 'error'", profile);
             res.responseCode = "deny";
+            res.unipayTrxId = null;
             res.ticket = Arrays.asList("Оплата отклонена", "Сбой банка/провайдера (тестовая ошибка)");
+            res.errorText = "Сбой банка/провайдера (тестовая ошибка)";
             return res;
         }
         
