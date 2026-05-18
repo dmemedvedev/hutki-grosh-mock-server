@@ -17,6 +17,12 @@ public class HutkiGroshJsonController {
     private static final Logger log = LoggerFactory.getLogger(HutkiGroshJsonController.class);
     private static final Map<Long, Long> trxCache = new java.util.concurrent.ConcurrentHashMap<>();
 
+    // Hardcoded test secret for the /sandbox-signed/* endpoints. Put the same
+    // value in the cabinet's "Секретная фраза" field to verify strict MD5
+    // signature checking end-to-end. Matches the v1.1 spec character/length
+    // constraints (8-32 chars, alphanumeric).
+    private static final String SIGNED_SANDBOX_SECRET = "MockTestSecret2026";
+
     @Value("${mock.prod.secret:}")
     private String prodSecret;
     @Value("${mock.prod.headerKey:X-Signature}")
@@ -100,7 +106,8 @@ public class HutkiGroshJsonController {
 
     @RequestMapping(value = { "/accountInfo", "/account-info",
                               "/sandbox/accountInfo", "/sandbox/account-info",
-                              "/sandbox-allow/accountInfo", "/sandbox-allow/account-info" },
+                              "/sandbox-allow/accountInfo", "/sandbox-allow/account-info",
+                              "/sandbox-signed/accountInfo", "/sandbox-signed/account-info" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req,
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
@@ -246,7 +253,8 @@ public class HutkiGroshJsonController {
 
     @RequestMapping(value = { "/submitPayment", "/submit-payment",
                               "/sandbox/submitPayment", "/sandbox/submit-payment",
-                              "/sandbox-allow/submitPayment", "/sandbox-allow/submit-payment" },
+                              "/sandbox-allow/submitPayment", "/sandbox-allow/submit-payment",
+                              "/sandbox-signed/submitPayment", "/sandbox-signed/submit-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
                                               @RequestParam(required = false) String account,
@@ -291,7 +299,8 @@ public class HutkiGroshJsonController {
 
     @RequestMapping(value = { "/confirmPayment", "/confirm-payment",
                               "/sandbox/confirmPayment", "/sandbox/confirm-payment",
-                              "/sandbox-allow/confirmPayment", "/sandbox-allow/confirm-payment" },
+                              "/sandbox-allow/confirmPayment", "/sandbox-allow/confirm-payment",
+                              "/sandbox-signed/confirmPayment", "/sandbox-signed/confirm-payment" },
                     method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
                                              @RequestParam(required = false) String account,
@@ -326,6 +335,7 @@ public class HutkiGroshJsonController {
         if (request == null) return "PROD";
         String uri = request.getRequestURI();
         if (uri == null) return "PROD";
+        if (uri.contains("/sandbox-signed")) return "SANDBOX-SIGNED";
         if (uri.contains("/sandbox-allow")) return "SANDBOX-ALLOW";
         if (uri.contains("/sandbox")) return "SANDBOX";
         return "PROD";
@@ -335,9 +345,19 @@ public class HutkiGroshJsonController {
         if (request == null) return true;
 
         String profile = profileOf(request);
-        boolean isSandbox = "SANDBOX".equals(profile) || "SANDBOX-ALLOW".equals(profile);
-        String secret = isSandbox ? sandboxSecret : prodSecret;
-        String headerKey = isSandbox ? sandboxHeaderKey : prodHeaderKey;
+        boolean isSandbox = "SANDBOX".equals(profile) || "SANDBOX-ALLOW".equals(profile)
+                || "SANDBOX-SIGNED".equals(profile);
+        String secret;
+        String headerKey;
+        if ("SANDBOX-SIGNED".equals(profile)) {
+            // Strict-signature test profile uses a hardcoded secret so it works
+            // without env-var changes on Render.
+            secret = SIGNED_SANDBOX_SECRET;
+            headerKey = sandboxHeaderKey;
+        } else {
+            secret = isSandbox ? sandboxSecret : prodSecret;
+            headerKey = isSandbox ? sandboxHeaderKey : prodHeaderKey;
+        }
         if (headerKey == null || headerKey.isEmpty()) headerKey = "X-Signature";
 
         String signature = request.getHeader(headerKey);
