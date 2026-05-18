@@ -3,6 +3,7 @@ package by.hgrosh.mockserver.controller;
 import by.hgrosh.mockserver.model.DataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.security.MessageDigest;
@@ -15,6 +16,15 @@ public class HutkiGroshJsonController {
 
     private static final Logger log = LoggerFactory.getLogger(HutkiGroshJsonController.class);
     private static final Map<Long, Long> trxCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Value("${mock.prod.secret:}")
+    private String prodSecret;
+    @Value("${mock.prod.headerKey:X-Signature}")
+    private String prodHeaderKey;
+    @Value("${mock.sandbox.secret:}")
+    private String sandboxSecret;
+    @Value("${mock.sandbox.headerKey:X-Signature}")
+    private String sandboxHeaderKey;
 
     // DTO for incoming requests
     public static class AccountInfoRequest {
@@ -79,12 +89,15 @@ public class HutkiGroshJsonController {
         public List<String> ticket = Arrays.asList("Оплата начата", "Всего хорошего");
     }
 
-    @RequestMapping(value = { "/accountInfo", "/account-info" }, method = { RequestMethod.GET, RequestMethod.POST })
-    public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req, 
+    @RequestMapping(value = { "/accountInfo", "/account-info",
+                              "/sandbox/accountInfo", "/sandbox/account-info" },
+                    method = { RequestMethod.GET, RequestMethod.POST })
+    public AccountInfoResponse accountInfo(@RequestBody(required = false) AccountInfoRequest req,
                                           @RequestHeader(value = "X-Signature", required = false) String signature,
                                           @RequestParam(required = false) String account,
                                           HttpServletRequest request) {
-        
+        String profile = profileOf(request);
+
         if (req == null) {
             req = new AccountInfoRequest();
             req.account = account;
@@ -93,11 +106,12 @@ public class HutkiGroshJsonController {
             req.account = account;
         }
 
-        DataStore.logJson("Incoming AccountInfo: " + req.account);
+        DataStore.logJson("[" + profile + "] Incoming AccountInfo: " + req.account);
+        log.info(">>>> [{}] AccountInfo account={}", profile, req.account);
 
         // MD5 Verification (US_1)
         if (signature != null) {
-            log.info(">>>> [SECURITY] Received signature: {}", signature);
+            log.info(">>>> [{}][SECURITY] Received signature: {}", profile, signature);
         }
 
         DataStore.Invoice invoice = DataStore.invoiceStore.get(req.account != null ? req.account : "");
@@ -172,15 +186,18 @@ public class HutkiGroshJsonController {
         return res;
     }
 
-    @RequestMapping(value = { "/submitPayment", "/submit-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = { "/submitPayment", "/submit-payment",
+                              "/sandbox/submitPayment", "/sandbox/submit-payment" },
+                    method = { RequestMethod.GET, RequestMethod.POST })
     public SubmitPaymentResponse submitPayment(@RequestBody(required = false) SubmitPaymentRequest req,
                                               @RequestParam(required = false) String account,
                                               HttpServletRequest request) {
+        String profile = profileOf(request);
         if (req == null) {
             req = new SubmitPaymentRequest();
             req.account = account;
         }
-        log.info(">>>> [JSON] SubmitPayment for account={}", req.account);
+        log.info(">>>> [{}][JSON] SubmitPayment for account={}", profile, req.account);
         SubmitPaymentResponse res = new SubmitPaymentResponse();
         
         if (!verifySignature(request)) {
@@ -209,16 +226,19 @@ public class HutkiGroshJsonController {
         return res;
     }
 
-    @RequestMapping(value = { "/confirmPayment", "/confirm-payment" }, method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = { "/confirmPayment", "/confirm-payment",
+                              "/sandbox/confirmPayment", "/sandbox/confirm-payment" },
+                    method = { RequestMethod.GET, RequestMethod.POST })
     public Map<String, Object> confirmPayment(@RequestBody(required = false) ConfirmPaymentRequest req,
                                              @RequestParam(required = false) String account,
                                               HttpServletRequest request) {
+        String profile = profileOf(request);
         if (req == null) {
             req = new ConfirmPaymentRequest();
             req.account = account;
             req.confirmed = true;
         }
-        log.info(">>>> [JSON] ConfirmPayment for account={}, confirmed={}", req.account, req.confirmed);
+        log.info(">>>> [{}][JSON] ConfirmPayment for account={}, confirmed={}", profile, req.account, req.confirmed);
         Map<String, Object> res = new HashMap<>();
         
         if (!verifySignature(request)) {
@@ -238,30 +258,55 @@ public class HutkiGroshJsonController {
         return res;
     }
 
+    private String profileOf(HttpServletRequest request) {
+        if (request == null) return "PROD";
+        String uri = request.getRequestURI();
+        return (uri != null && uri.contains("/sandbox")) ? "SANDBOX" : "PROD";
+    }
+
     private boolean verifySignature(HttpServletRequest request) {
         if (request == null) return true;
-        
-        String signature = request.getHeader("X-Signature");
-        if (signature == null || signature.isEmpty()) return true;
+
+        String profile = profileOf(request);
+        String secret = "SANDBOX".equals(profile) ? sandboxSecret : prodSecret;
+        String headerKey = "SANDBOX".equals(profile) ? sandboxHeaderKey : prodHeaderKey;
+        if (headerKey == null || headerKey.isEmpty()) headerKey = "X-Signature";
+
+        String signature = request.getHeader(headerKey);
+
+        // No secret configured for this profile -> bypass (preserves current prod behavior unless overridden).
+        if (secret == null || secret.isEmpty()) {
+            if (signature != null && !signature.isEmpty()) {
+                log.info(">>>> [{}][SECURITY] Signature received but no secret configured — bypassing", profile);
+            }
+            return true;
+        }
+
+        if (signature == null || signature.isEmpty()) {
+            log.warn(">>>> [{}][SECURITY] Missing '{}' header while secret is configured — denying", profile, headerKey);
+            return false;
+        }
 
         if (request instanceof org.springframework.web.util.ContentCachingRequestWrapper wrapper) {
             try {
-                String bodyStr = new String(wrapper.getContentAsByteArray(), wrapper.getCharacterEncoding() != null ? wrapper.getCharacterEncoding() : "UTF-8");
-                String secret = "077ad577a2b0458ea329eaf91ae01130";
-                String textToHash = bodyStr + secret;
-                String computed = calculateMd5(textToHash);
-                
+                String bodyStr = new String(wrapper.getContentAsByteArray(),
+                        wrapper.getCharacterEncoding() != null ? wrapper.getCharacterEncoding() : "UTF-8");
+                String computed = calculateMd5(bodyStr + secret);
+
                 if (signature.equalsIgnoreCase(computed)) {
-                    log.info(">>>> [SECURITY] Signature verified successfully!");
+                    log.info(">>>> [{}][SECURITY] Signature verified (header={})", profile, headerKey);
                     return true;
-                } else {
-                    log.error(">>>> [SECURITY] Invalid signature! Expected: {}, Actual: {}", computed, signature);
-                    return true; // Bypass security check for other services
                 }
+                log.error(">>>> [{}][SECURITY] Invalid signature on header '{}'! Expected={}, Actual={}",
+                        profile, headerKey, computed, signature);
+                return false;
             } catch (Exception e) {
-                log.error(">>>> [SECURITY] Exception verifying signature", e);
+                log.error(">>>> [" + profile + "][SECURITY] Exception verifying signature", e);
+                return false;
             }
         }
+        // Body wasn't cached — can't verify reliably, fall back to bypass with a warning.
+        log.warn(">>>> [{}][SECURITY] Request body not cached, cannot verify signature — bypassing", profile);
         return true;
     }
 
