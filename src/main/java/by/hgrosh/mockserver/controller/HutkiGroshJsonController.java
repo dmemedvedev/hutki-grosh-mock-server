@@ -78,22 +78,30 @@ public class HutkiGroshJsonController {
         public Double minAmount = 1.00;
         public Double maxAmount = 10000.00;
         public String sessionId;
+        public String editFIO = null;
         public ClientName clientName = new ClientName();
+        public String editAddress = null;
+        public Address address = null;
         public List<Map<String, Object>> parameterList = new ArrayList<>();
         public List<String> ticket = null;
         public String message = null;
         public String errorText = null;
     }
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public static class ClientName {
         public String firstName;
+        public String middleName;
         public String surName;
     }
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public static class Address {
-        public String city = "Minsk";
-        public String street = "";
-        public String house = "";
+        public String city;
+        public String street;
+        public String house;
+        public String building;
+        public String apartment;
     }
 
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
@@ -188,6 +196,20 @@ public class HutkiGroshJsonController {
         res.sessionId = req.sessionId != null ? req.sessionId : String.valueOf(System.currentTimeMillis() % 10000000);
         res.clientName.firstName = invoice.firstName;
         res.clientName.surName = invoice.surname;
+
+        // Magic account: если номер счёта начинается с "fio" — включаем
+        // редактирование ФИО/адреса плательщиком (API v1.1: editFIO/editAddress).
+        if (req.account != null && req.account.toLowerCase().startsWith("fio")) {
+            res.editFIO = "allow";
+            res.clientName.middleName = "Тестович";
+            res.editAddress = "allow";
+            res.address = new Address();
+            res.address.city = "Минск";
+            res.address.street = "Независимости";
+            res.address.house = "1";
+            res.address.apartment = "100";
+            log.info(">>>> [{}] editFIO/editAddress=allow for account={}", profile, req.account);
+        }
 
         // Force-allow тестовый режим: перезаписываем edit=allow для всех параметров,
         // чтобы проверить как кабинет отрисует ввод всех полей плательщиком.
